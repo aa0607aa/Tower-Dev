@@ -1,0 +1,20 @@
+# Godot 4+ 엔진 캐시/생성물
+.godot/
+/android/
+
+# 내보내기 산출물
+*.tmp
+build/
+export/
+
+# 개발 빌드 로컬 테스트 세이브
+/saves/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 에디터
+.vscode/
+*.swp
