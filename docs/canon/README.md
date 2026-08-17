@@ -57,14 +57,17 @@ docs/canon/
 ## 항목 형식
 
 ```markdown
-### FLR-003 · 1층 서든데스 3600초
+### DOM-000 · 한 줄 제목
 
 - **상태**: CANON
-- **출처**: 설정서 v1.1 §6.3 · DECISIONS D-010
-- **내용**: 1층에서 눈을 뜬 뒤 정확히 3600초가 지나면 서든데스가 발동한다.
-- **구현**: `data/canon/canon.gd` `FLOOR1_SUDDEN_DEATH_SECONDS` · PHASE 5
-- **관련**: FLR-004, FAC-001
+- **출처**: 설정서 v1.1 §0.0 · DECISIONS D-000
+- **내용**: 한 항목에 한 사실만 적는다.
+- **구현**: `data/canon/canon.gd` `SOME_CONST` · PHASE N
+- **관련**: DOM-001, OTH-002
 ```
+
+> 예시의 `DOM-000`은 **실재하지 않는 자리표시자**다. 예시에 진짜 ID를 쓰면 중복 검사에 걸리고,
+> 무엇보다 그 ID를 검색한 사람이 예시를 실제 canon으로 오해한다. 예시에는 항상 가짜 ID를 쓴다.
 
 필드 규칙:
 
