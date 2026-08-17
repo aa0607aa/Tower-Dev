@@ -1,0 +1,12 @@
+# Godot 프로젝트는 LF로 정규화한다 (에디터가 항상 LF로 다시 저장하므로
+# CRLF 변환을 켜두면 커밋마다 전체 diff가 발생한다).
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ogg binary
+*.wav binary
+*.ttf binary
+*.docx binary
+*.res binary
+*.scn binary

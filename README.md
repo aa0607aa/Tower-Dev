@@ -22,9 +22,37 @@
 | `COLLABORATION_PROTOCOL.md` | 다중 에이전트 협업 규칙 (개발 가이드와 독립 관리) |
 | `docs/DEVELOPMENT_GUIDE.md` | 통합 개발 가이드라인 v2.0 (구현 방식) |
 | `docs/SETTING_BIBLE_v1.1_README.md` | 세계관 canon 원본 배치 안내 |
+| `docs/CANON_NOTES.md` | 설정서에서 뽑은 구현용 canon 메모 (원본이 항상 우선) |
+| `docs/CODING_STYLE.md` | GDScript 코딩 규칙 + 아키텍처 규칙 |
+| `docs/TEST_CHECKLIST.md` | PHASE별 테스트 기준 및 필요 완료 등급 |
 | `DECISIONS.md` | 결정 이력 (Resolved / Proposed / TBD) |
 | `CURRENT_STATE.md` | 현재 작업 상태 (WORK REPORT 최신본) |
 | `CHANGELOG.md` | 확정된 변경 이력 |
+| `assets/STYLE_GUIDE.md` | 도트 아트 규칙 (PHASE 8에서 확정) |
+
+> `DECISIONS.md`는 협업 프로토콜 §6에 따라 **저장소 루트**에 둔다.
+> (개발 가이드 §6의 폴더 그림은 `docs/DECISIONS.md`로 그려져 있으나, 협업 프로토콜이 우선한다.)
+
+## 프로젝트 구조
+
+```
+tower/
+├─ project.godot          # Godot 4.7.1 stable · GL Compatibility · nearest filter
+├─ icon.svg
+├─ assets/                # characters enemies tilesets items effects ui + STYLE_GUIDE.md
+├─ data/                  # canon run world floors/floor1_fixed items enemies traps skills fruits curves
+├─ scenes/                # boot world player npc combat ui
+├─ scripts/               # core world player combat npc items save ai
+├─ tests/
+└─ saves/                 # 로컬 테스트용 (git 제외)
+```
+
+## 실행
+
+```
+godot --path . --headless --quit   # 임포트/파스 오류 확인
+godot --path .                     # 창 실행 (ESC로 종료)
+```
 
 ## 진실의 우선순위
 
