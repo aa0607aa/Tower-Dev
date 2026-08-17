@@ -26,7 +26,8 @@
 | **`docs/canon/INDEX.md`** | **Canon 전체 색인 (133항목/15도메인) — 찾을 때 여기부터** |
 | `docs/canon/README.md` | Canon 색인 체계의 정의 (ID 규칙·상태·작성법) |
 | `docs/CANON_NOTES.md` | (비움 — `docs/canon/`으로 통합) |
-| `docs/DATAMINING_POLICY.md` | 데이터 마이닝 대응 정책 (PROPOSAL — 승인 대기) |
+| `docs/DATAMINING_POLICY.md` | 데이터 마이닝 대응 정책 (승인됨 — D-012) |
+| `docs/BACKLOG.md` | 나중에 할 것 / MVP 제외 범위 |
 | `docs/CODING_STYLE.md` | GDScript 코딩 규칙 + 아키텍처 규칙 |
 | `docs/TEST_CHECKLIST.md` | PHASE별 테스트 기준 및 필요 완료 등급 |
 | `DECISIONS.md` | 결정 이력 (Resolved / Proposed / TBD) |

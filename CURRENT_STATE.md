@@ -9,9 +9,9 @@
 - **저장소**: `https://github.com/aa0607aa/Tower-Dev.git` · `main` 브랜치
 - **엔진**: Godot **4.7.1-stable** (`4.7.1.stable.official.a13da4feb`) 설치·실행 확인됨
 - **현재 작업**: PHASE 1 착수 전 **설정(canon) 체계 정비 중** — 오너 지시
-- **오너 결정 대기**: `D-012` 데이터 마이닝 대응 정책 (Q1/Q2/Q3)
-- **canon**: `docs/SETTING_BIBLE_v1.1.docx` 입고 완료 · 전문 대조해
-  `docs/canon/` **133항목 / 15도메인** 등재 완료. 충돌 0건
+- **오너 결정 대기**: 없음 (`D-012` 2026-08-17 Resolved)
+- **canon**: `docs/SETTING_BIBLE_v1.1.docx` 입고 완료 · 전문 대조 + 커버리지 감사해
+  `docs/canon/` **137항목 / 15도메인** 등재 완료. 충돌 0건, PROPOSAL 0건
 - **다음 작업**: PHASE 1 (이동/카메라) — **오너 지시 전 착수 금지**
 
 ## 최근 WORK REPORT
@@ -65,10 +65,20 @@ PHASE: 0 이후 / PHASE 1 착수 전 준비
   project.godot에는 넣지 않음(배포 렌더링 경로는 별도 결정 사항, BACKLOG)
 - Mirage Driver(2008, 상태 Degraded)가 디스플레이 장치로 잡혀 있음 — 원격제어 SW 잔재로 추정
 - 테스트 러너 미도입 (PHASE 1 착수 시 결정 필요)
+추가 작업 (CANON-002, 같은 날):
+- 설정서 원본 입고 → 전문 대조 → 63 → 133항목 확장
+- 절 단위 커버리지 감사 → **누락 4건 발견·보완** → 137항목
+  (§0.2 canon 우선순위 → SYS-013 / §6.4 대거 특성 → FLR-007 보강 /
+   §10.1 파생 능력 설계 원칙 → CHR-018 / §24.2 오르골 배경 → CHR-019)
+- D-012 오너 승인 반영: Tier 1·2 → canon SYS-009, Q3 → canon SYS-014,
+  Tier 3 → BACKLOG B-001
+- docs/BACKLOG.md 신규 (개발 가이드 §11 운영 원칙상 필요했으나 없었음)
+- 검증: ID 중복 0 / 도메인 개수 색인과 일치 / PROPOSAL 잔존 0
+  (CANON 112 · TBD 10 · DESIGN 9 · 혼합 6)
 다음 작업:
-- 오너: D-012 결정, 설정서 docx 배치
-- 이후: 원본 대조 검수 → PHASE 1 착수 지시 대기
-완료 등급: VERIFIED (드라이버·크래시 원인 규명) / IMPLEMENTED (canon 색인 — 원본 대조 전)
+- PHASE 1 (이동/카메라) 착수 지시 대기
+- 착수 전 결정 필요: 테스트 러너 (BACKLOG B-004 — GUT vs 자체 SceneTree 스크립트)
+완료 등급: VERIFIED (드라이버·크래시 원인 규명, canon 색인 정합성 검증)
 Git commit: <CANON-001 커밋 해시로 채움>
 ```
 

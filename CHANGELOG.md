@@ -27,15 +27,21 @@
   `FLR-004`·`RAC-002` 같은 ID로 코드 주석에서 근거를 인용한다.
   설정서 §26의 미정 영역 12개를 전부 TBD로 매핑해 다음 세션이 빈칸을 지어내는 사고를 차단한다.
   - `README.md`(체계 정의·대조 결과) · `INDEX.md`(색인)
-  - `WLD`10 `HIS`5 `FLR`21 `CHR`17 `RAC`3 `SKL`9 `CBT`13 `MAG`5
-    `ITM`6 `FAC`11 `NPC`4 `KGD`7 `DGN`5 `GOD`5 `SYS`12
+  - `WLD`10 `HIS`5 `FLR`21 `CHR`19 `RAC`3 `SKL`9 `CBT`13 `MAG`5
+    `ITM`6 `FAC`11 `NPC`4 `KGD`7 `DGN`5 `GOD`5 `SYS`14 = **137항목**
   - **[CANON CONFLICT] 0건** — 개발 가이드 v2.0과 설정서 v1.1은 정합했다.
+  - 등재 후 **절 단위 커버리지 감사**에서 누락 4건을 찾아 보완했다:
+    §0.2(→`SYS-013`) · §6.4 대거 특성(→`FLR-007`) · §10.1(→`CHR-018`) · §24.2(→`CHR-019`).
+  - 정합성 검증: ID 중복 0 · 도메인 개수 색인 일치 · PROPOSAL 잔존 0.
 
 ### Changed
 - `docs/CANON_NOTES.md` 내용을 `docs/canon/`으로 통합하고 포인터만 남겼다.
   같은 canon을 두 곳에 두면 반드시 어긋나기 때문이다.
-- `docs/DATAMINING_POLICY.md` — 데이터 마이닝 대응 정책 타당성 검토 (**PROPOSAL**, 오너 승인 대기).
-- `DECISIONS.md` `D-012` [Proposed] — 데이터 마이닝 정책 3 Tier 분리안.
+- `docs/DATAMINING_POLICY.md` — 데이터 마이닝 대응 정책 타당성 검토.
+- `DECISIONS.md` **`D-012` [Resolved]** (오너 승인 2026-08-17) — 데이터 마이닝 정책.
+  Tier 1·2 즉시 채택 → canon `SYS-009`. 1층 지형 은닉 불가 전제 → canon `SYS-014`.
+  Tier 3(실제 볼륨·더미)는 BACKLOG `B-001`로 보류.
+- `docs/BACKLOG.md` — 개발 가이드 §11 운영 원칙이 요구하는 백로그 문서. B-001~B-006.
 
 ### Fixed
 - `Boot._ready()`에서 `change_scene_to_file()`을 직접 호출해 발생하던
