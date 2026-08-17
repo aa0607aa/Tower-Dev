@@ -21,10 +21,19 @@
     `assets/STYLE_GUIDE.md` · `tests/README.md`.
   - `.gitattributes` — LF 정규화(Godot 에디터의 CRLF 재저장으로 인한 전체 diff 방지).
 
-- **Canon 색인 체계** (`docs/canon/`) — canon을 ID 붙은 낱개 항목 63개로 분해하고 7개 도메인으로
-  분류. `INDEX.md` 하나로 전체를 훑고, `WLD-002`·`FLR-004` 같은 ID로 코드 주석에서 근거를 인용한다.
-  TBD 12개를 명시 등재해 다음 세션이 빈칸을 지어내는 사고를 차단한다.
-  - `README.md`(체계 정의) · `INDEX.md`(색인) · `WLD` `FLR` `CHR` `FAC` `CBT` `SKL` `SYS`
+- **세계관 canon 원본** `docs/SETTING_BIBLE_v1.1.docx` 저장소 배치 (오너).
+- **Canon 색인 체계** (`docs/canon/`) — 설정서 v1.1 전문(§0~§27)을 대조해 canon을 ID 붙은
+  낱개 항목 **133개 / 15개 도메인**으로 분해했다. `INDEX.md` 하나로 전체를 훑고,
+  `FLR-004`·`RAC-002` 같은 ID로 코드 주석에서 근거를 인용한다.
+  설정서 §26의 미정 영역 12개를 전부 TBD로 매핑해 다음 세션이 빈칸을 지어내는 사고를 차단한다.
+  - `README.md`(체계 정의·대조 결과) · `INDEX.md`(색인)
+  - `WLD`10 `HIS`5 `FLR`21 `CHR`17 `RAC`3 `SKL`9 `CBT`13 `MAG`5
+    `ITM`6 `FAC`11 `NPC`4 `KGD`7 `DGN`5 `GOD`5 `SYS`12
+  - **[CANON CONFLICT] 0건** — 개발 가이드 v2.0과 설정서 v1.1은 정합했다.
+
+### Changed
+- `docs/CANON_NOTES.md` 내용을 `docs/canon/`으로 통합하고 포인터만 남겼다.
+  같은 canon을 두 곳에 두면 반드시 어긋나기 때문이다.
 - `docs/DATAMINING_POLICY.md` — 데이터 마이닝 대응 정책 타당성 검토 (**PROPOSAL**, 오너 승인 대기).
 - `DECISIONS.md` `D-012` [Proposed] — 데이터 마이닝 정책 3 Tier 분리안.
 

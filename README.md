@@ -22,9 +22,10 @@
 | `COLLABORATION_PROTOCOL.md` | 다중 에이전트 협업 규칙 (개발 가이드와 독립 관리) |
 | `docs/DEVELOPMENT_GUIDE.md` | 통합 개발 가이드라인 v2.0 (구현 방식) |
 | `docs/SETTING_BIBLE_v1.1_README.md` | 세계관 canon 원본 배치 안내 |
-| **`docs/canon/INDEX.md`** | **Canon 전체 색인 — canon을 찾을 때 여기부터** |
+| **`docs/SETTING_BIBLE_v1.1.docx`** | **세계관 canon 원본 — 진실. 충돌 시 항상 이긴다** |
+| **`docs/canon/INDEX.md`** | **Canon 전체 색인 (133항목/15도메인) — 찾을 때 여기부터** |
 | `docs/canon/README.md` | Canon 색인 체계의 정의 (ID 규칙·상태·작성법) |
-| `docs/CANON_NOTES.md` | 설정서에서 뽑은 구현용 canon 메모 (원본이 항상 우선) |
+| `docs/CANON_NOTES.md` | (비움 — `docs/canon/`으로 통합) |
 | `docs/DATAMINING_POLICY.md` | 데이터 마이닝 대응 정책 (PROPOSAL — 승인 대기) |
 | `docs/CODING_STYLE.md` | GDScript 코딩 규칙 + 아키텍처 규칙 |
 | `docs/TEST_CHECKLIST.md` | PHASE별 테스트 기준 및 필요 완료 등급 |

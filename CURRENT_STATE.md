@@ -10,7 +10,8 @@
 - **엔진**: Godot **4.7.1-stable** (`4.7.1.stable.official.a13da4feb`) 설치·실행 확인됨
 - **현재 작업**: PHASE 1 착수 전 **설정(canon) 체계 정비 중** — 오너 지시
 - **오너 결정 대기**: `D-012` 데이터 마이닝 대응 정책 (Q1/Q2/Q3)
-- **입고 대기**: `docs/SETTING_BIBLE_v1.1.docx` (원본 입고 후 canon 색인 63개 항목 대조 검수)
+- **canon**: `docs/SETTING_BIBLE_v1.1.docx` 입고 완료 · 전문 대조해
+  `docs/canon/` **133항목 / 15도메인** 등재 완료. 충돌 0건
 - **다음 작업**: PHASE 1 (이동/카메라) — **오너 지시 전 착수 금지**
 
 ## 최근 WORK REPORT
@@ -21,22 +22,25 @@
 PHASE: 0 이후 / PHASE 1 착수 전 준비
 목표: ① GPU 드라이버 문제 해결 ② canon 색인 체계 구축 ③ 데이터 마이닝 정책 검토
 변경 파일:
-- docs/canon/README.md      (신규 — 색인 체계 정의)
-- docs/canon/INDEX.md       (신규 — 전체 색인 63항목)
-- docs/canon/WLD.md         (신규 — 세계 구조 10)
-- docs/canon/FLR.md         (신규 — 층 11)
-- docs/canon/CHR.md         (신규 — 캐릭터 12)
-- docs/canon/FAC.md         (신규 — 특수 시설 7)
-- docs/canon/CBT.md         (신규 — 전투 9)
-- docs/canon/SKL.md         (신규 — 스킬 5)
-- docs/canon/SYS.md         (신규 — 메타 규칙 9)
+- docs/SETTING_BIBLE_v1.1.docx (오너 배치 — canon 원본)
+- docs/canon/README.md      (신규 — 색인 체계 정의 + 대조 결과)
+- docs/canon/INDEX.md       (신규 — 전체 색인 133항목/15도메인)
+- docs/canon/WLD.md  10  · HIS.md   5 · FLR.md  21 · CHR.md 17
+- docs/canon/RAC.md   3  · SKL.md   9 · CBT.md  13 · MAG.md  5
+- docs/canon/ITM.md   6  · FAC.md  11 · NPC.md   4 · KGD.md  7
+- docs/canon/DGN.md   5  · GOD.md   5 · SYS.md  12
+- docs/CANON_NOTES.md       (비움 — docs/canon/으로 통합, 포인터만 유지)
 - docs/DATAMINING_POLICY.md (신규 — PROPOSAL)
 - DECISIONS.md              (갱신 — D-012 Proposed 추가)
 - docs/TEST_CHECKLIST.md    (갱신 — 0-3 검증 완료, 환경 이슈 기록)
 - README.md                 (갱신 — 문서 지도, 실행 명령)
 구현 내용:
-- canon을 ID 붙은 낱개 항목 63개로 분해하고 7개 도메인(WLD/FLR/CHR/FAC/CBT/SKL/SYS)으로 분류.
-  ID는 재사용 금지, 코드 주석에서 근거로 인용 가능. TBD 12개를 명시 등재해 "빈칸을 지어내는 사고"를 차단
+- canon을 ID 붙은 낱개 항목으로 분해해 15개 도메인으로 분류. ID는 재사용 금지,
+  코드 주석에서 근거로 인용 가능(`## FLR-004: ...`)
+- 1차 색인 63항목(DECISIONS+개발가이드 기반) → 설정서 원본 입고 후 전문 대조 → **133항목으로 확장**
+  신규 도메인 8개: HIS(역사·인과) RAC(종족) MAG(마법) ITM(아이템) NPC KGD(왕국·팩션)
+  DGN(메인던전) GOD(신·신좌)
+- 설정서 §26의 미정 영역 12개를 전부 TBD 항목으로 매핑 — "빈칸을 지어내는 사고"를 차단
 - 데이터 마이닝 제안 타당성 검토 → 3 Tier 분리안으로 D-012 Proposed 등록
 테스트:
 - AMD 드라이버 설치 (Windows Update, 관리자 권한 승격):
@@ -49,9 +53,14 @@ PHASE: 0 이후 / PHASE 1 착수 전 준비
 - 실패: 네이티브 OpenGL 종료 크래시 (환경 이슈, 우회 확보)
 설정 관련 결정:
 - **DECISION 필요**: D-012 데이터 마이닝 정책 Q1/Q2/Q3 — 특히 Q3(1층 지형 은닉 불가 확인)
-- 새 canon을 만들지 않았다. 색인 63항목은 전부 DECISIONS.md + 개발 가이드에서만 유래
+- 새 canon을 만들지 않았다. 133항목 전부 설정서 원문 또는 DECISIONS.md에서 유래
+- **[CANON CONFLICT] 0건** — 개발 가이드 v2.0과 설정서 v1.1은 정합했다
+- 대조 중 발견한 주의점(충돌 아님): FAC-006 계단 리롤은 "의도된 변칙"으로 명시 허용 /
+  RAC-002 거인 ×1.3과 "3배"는 다른 값 / CBT-010 성장곡선 효율을 공격력에 그대로 곱하면 안 됨 /
+  SYS-012 레거시 텍스트 RPG 규칙은 canon에서 명시적으로 제거됨
 알려진 문제:
-- 설정서 v1.1 원본(docx) 미입고 → 색인 전 항목 원본 대조 검수 필요
+- canon 색인 ID 재배정 1건 (FAC-006/007 → KGD-007/FAC-011). 원칙상 ID는 재사용 금지이나
+  원본 입고 전 임시 색인 단계라 예외 처리. 흔적은 FAC.md 하단에 기록. 이후 재사용 없음
 - 개발 PC 네이티브 OpenGL 종료 크래시 → `--rendering-driver opengl3_angle`로 우회.
   project.godot에는 넣지 않음(배포 렌더링 경로는 별도 결정 사항, BACKLOG)
 - Mirage Driver(2008, 상태 Degraded)가 디스플레이 장치로 잡혀 있음 — 원격제어 SW 잔재로 추정
