@@ -5,12 +5,65 @@
 
 ## 현재 위치
 
-- **PHASE**: 0 (프로젝트 뼈대) — **완료 조건 충족, 오너 지시 대기**
+- **PHASE**: 0 (프로젝트 뼈대) — **완료 (VERIFIED)**
 - **저장소**: `https://github.com/aa0607aa/Tower-Dev.git` · `main` 브랜치
 - **엔진**: Godot **4.7.1-stable** (`4.7.1.stable.official.a13da4feb`) 설치·실행 확인됨
+- **현재 작업**: PHASE 1 착수 전 **설정(canon) 체계 정비 중** — 오너 지시
+- **오너 결정 대기**: `D-012` 데이터 마이닝 대응 정책 (Q1/Q2/Q3)
+- **입고 대기**: `docs/SETTING_BIBLE_v1.1.docx` (원본 입고 후 canon 색인 63개 항목 대조 검수)
 - **다음 작업**: PHASE 1 (이동/카메라) — **오너 지시 전 착수 금지**
 
 ## 최근 WORK REPORT
+
+```
+[WORK REPORT]
+작업 ID: CANON-001
+PHASE: 0 이후 / PHASE 1 착수 전 준비
+목표: ① GPU 드라이버 문제 해결 ② canon 색인 체계 구축 ③ 데이터 마이닝 정책 검토
+변경 파일:
+- docs/canon/README.md      (신규 — 색인 체계 정의)
+- docs/canon/INDEX.md       (신규 — 전체 색인 63항목)
+- docs/canon/WLD.md         (신규 — 세계 구조 10)
+- docs/canon/FLR.md         (신규 — 층 11)
+- docs/canon/CHR.md         (신규 — 캐릭터 12)
+- docs/canon/FAC.md         (신규 — 특수 시설 7)
+- docs/canon/CBT.md         (신규 — 전투 9)
+- docs/canon/SKL.md         (신규 — 스킬 5)
+- docs/canon/SYS.md         (신규 — 메타 규칙 9)
+- docs/DATAMINING_POLICY.md (신규 — PROPOSAL)
+- DECISIONS.md              (갱신 — D-012 Proposed 추가)
+- docs/TEST_CHECKLIST.md    (갱신 — 0-3 검증 완료, 환경 이슈 기록)
+- README.md                 (갱신 — 문서 지도, 실행 명령)
+구현 내용:
+- canon을 ID 붙은 낱개 항목 63개로 분해하고 7개 도메인(WLD/FLR/CHR/FAC/CBT/SKL/SYS)으로 분류.
+  ID는 재사용 금지, 코드 주석에서 근거로 인용 가능. TBD 12개를 명시 등재해 "빈칸을 지어내는 사고"를 차단
+- 데이터 마이닝 제안 타당성 검토 → 3 Tier 분리안으로 D-012 Proposed 등록
+테스트:
+- AMD 드라이버 설치 (Windows Update, 관리자 권한 승격):
+  Microsoft 기본 디스플레이 어댑터 → AMD Radeon(TM) R5 240, OpenGL 3.3 Core Profile 실GPU
+- 격리 테스트로 종료 크래시 원인 규명:
+  headless exit 0 / 네이티브 GL 창 0xC0000409 (3/3) /
+  **빈 프로젝트(Node2D 하나)도 동일 크래시 (3/3)** → 우리 코드 아님, 드라이버+엔진 문제
+  Vulkan/D3D12 미지원 → GL 폴백 → 동일 / **ANGLE 강제 시 exit 0 (3/3)**
+- 성공: ESC 종료 **오너가 직접 눌러 검증 완료** → PHASE 0 완료 조건 전부 충족
+- 실패: 네이티브 OpenGL 종료 크래시 (환경 이슈, 우회 확보)
+설정 관련 결정:
+- **DECISION 필요**: D-012 데이터 마이닝 정책 Q1/Q2/Q3 — 특히 Q3(1층 지형 은닉 불가 확인)
+- 새 canon을 만들지 않았다. 색인 63항목은 전부 DECISIONS.md + 개발 가이드에서만 유래
+알려진 문제:
+- 설정서 v1.1 원본(docx) 미입고 → 색인 전 항목 원본 대조 검수 필요
+- 개발 PC 네이티브 OpenGL 종료 크래시 → `--rendering-driver opengl3_angle`로 우회.
+  project.godot에는 넣지 않음(배포 렌더링 경로는 별도 결정 사항, BACKLOG)
+- Mirage Driver(2008, 상태 Degraded)가 디스플레이 장치로 잡혀 있음 — 원격제어 SW 잔재로 추정
+- 테스트 러너 미도입 (PHASE 1 착수 시 결정 필요)
+다음 작업:
+- 오너: D-012 결정, 설정서 docx 배치
+- 이후: 원본 대조 검수 → PHASE 1 착수 지시 대기
+완료 등급: VERIFIED (드라이버·크래시 원인 규명) / IMPLEMENTED (canon 색인 — 원본 대조 전)
+Git commit: <CANON-001 커밋 해시로 채움>
+```
+
+## 이전 WORK REPORT
 
 ```
 [WORK REPORT]

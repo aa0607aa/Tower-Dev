@@ -22,7 +22,10 @@
 | `COLLABORATION_PROTOCOL.md` | 다중 에이전트 협업 규칙 (개발 가이드와 독립 관리) |
 | `docs/DEVELOPMENT_GUIDE.md` | 통합 개발 가이드라인 v2.0 (구현 방식) |
 | `docs/SETTING_BIBLE_v1.1_README.md` | 세계관 canon 원본 배치 안내 |
+| **`docs/canon/INDEX.md`** | **Canon 전체 색인 — canon을 찾을 때 여기부터** |
+| `docs/canon/README.md` | Canon 색인 체계의 정의 (ID 규칙·상태·작성법) |
 | `docs/CANON_NOTES.md` | 설정서에서 뽑은 구현용 canon 메모 (원본이 항상 우선) |
+| `docs/DATAMINING_POLICY.md` | 데이터 마이닝 대응 정책 (PROPOSAL — 승인 대기) |
 | `docs/CODING_STYLE.md` | GDScript 코딩 규칙 + 아키텍처 규칙 |
 | `docs/TEST_CHECKLIST.md` | PHASE별 테스트 기준 및 필요 완료 등급 |
 | `DECISIONS.md` | 결정 이력 (Resolved / Proposed / TBD) |
@@ -50,9 +53,13 @@ tower/
 ## 실행
 
 ```
-godot --path . --headless --quit   # 임포트/파스 오류 확인
-godot --path .                     # 창 실행 (ESC로 종료)
+godot --path . --headless --import                  # 임포트/파스 오류 확인
+godot --path . --rendering-driver opengl3_angle     # 창 실행 (ESC로 종료)
 ```
+
+> `--rendering-driver opengl3_angle`은 **현재 개발 PC 전용 우회**다.
+> 이 PC의 AMD 드라이버가 네이티브 OpenGL 종료 시 크래시하기 때문이며, 다른 환경에서는
+> 그냥 `godot --path .`로 실행하면 된다. 자세한 근거는 `docs/TEST_CHECKLIST.md`.
 
 ## 진실의 우선순위
 

@@ -21,11 +21,22 @@
     `assets/STYLE_GUIDE.md` · `tests/README.md`.
   - `.gitattributes` — LF 정규화(Godot 에디터의 CRLF 재저장으로 인한 전체 diff 방지).
 
+- **Canon 색인 체계** (`docs/canon/`) — canon을 ID 붙은 낱개 항목 63개로 분해하고 7개 도메인으로
+  분류. `INDEX.md` 하나로 전체를 훑고, `WLD-002`·`FLR-004` 같은 ID로 코드 주석에서 근거를 인용한다.
+  TBD 12개를 명시 등재해 다음 세션이 빈칸을 지어내는 사고를 차단한다.
+  - `README.md`(체계 정의) · `INDEX.md`(색인) · `WLD` `FLR` `CHR` `FAC` `CBT` `SKL` `SYS`
+- `docs/DATAMINING_POLICY.md` — 데이터 마이닝 대응 정책 타당성 검토 (**PROPOSAL**, 오너 승인 대기).
+- `DECISIONS.md` `D-012` [Proposed] — 데이터 마이닝 정책 3 Tier 분리안.
+
 ### Fixed
 - `Boot._ready()`에서 `change_scene_to_file()`을 직접 호출해 발생하던
   "Parent node is busy adding/removing children" 런타임 에러 → 한 프레임 대기 후 전환하도록 수정.
 
 ### Notes
-- PHASE 0 실행 검증 완료: Godot 4.7.1-stable에서 임포트/헤드리스/창 실행 모두 exit 0, 에러 0.
-- 설정서 v1.1 원본(docx) 미입고 — `docs/CANON_NOTES.md`는 입고 후 대조 검수 필요.
-- 다음: PHASE 1 (이동/카메라) — 오너 지시 대기.
+- **PHASE 0 완료 (VERIFIED).** 완료 조건 전부 충족 — 실행/종료 정상, Git 커밋·push 존재.
+  ESC 종료는 오너가 직접 확인.
+- 개발 PC 이슈: AMD 드라이버 설치로 OpenGL 3.3 실GPU 확보. 단 네이티브 OpenGL 종료 시
+  `0xC0000409` 크래시가 있어(빈 프로젝트에서도 재현 — 엔진/드라이버 문제) 개발 실행은
+  `--rendering-driver opengl3_angle`로 우회. `project.godot`은 건드리지 않음.
+- 설정서 v1.1 원본(docx) 미입고 — `docs/canon/` 63항목과 `docs/CANON_NOTES.md`는 입고 후 대조 검수 필요.
+- 다음: `D-012` 오너 결정 → 원본 대조 검수 → PHASE 1 (이동/카메라) 지시 대기.
