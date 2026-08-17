@@ -83,5 +83,5 @@ PHASE: 0 (프로젝트 뼈대)
 완료 등급: VERIFIED
   (PHASE 0 완료 조건 "빈 화면까지 정상 실행·정상 종료 + Git 첫 커밋"은 충족.
    ESC 종료 키 입력만 오너 확인 대기 → 그 확인이 끝나면 PLAYTESTED 불필요 항목이므로 마감)
-Git commit: <PHASE0-001 커밋 해시로 채움>
+Git commit: 72c4ff4  (문서 스캐폴딩 초기 커밋: 26be95f)
 ```
