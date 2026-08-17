@@ -23,6 +23,8 @@
 | `docs/DEVELOPMENT_GUIDE.md` | 통합 개발 가이드라인 v2.0 (구현 방식) |
 | `docs/SETTING_BIBLE_v1.1_README.md` | 세계관 canon 원본 배치 안내 |
 | **`docs/SETTING_BIBLE_v1.1.docx`** | **세계관 canon 원본 — 진실. 충돌 시 항상 이긴다** |
+| `docs/SETTING_BIBLE_v1.1.md` | 위의 자동 생성 사본 (canon 아님 · 직접 편집 금지) |
+| `tools/docx_to_md.ps1` | 사본 생성기 — docx 개정 시 재실행 |
 | **`docs/canon/INDEX.md`** | **Canon 전체 색인 (133항목/15도메인) — 찾을 때 여기부터** |
 | `docs/canon/README.md` | Canon 색인 체계의 정의 (ID 규칙·상태·작성법) |
 | `docs/CANON_NOTES.md` | (비움 — `docs/canon/`으로 통합) |

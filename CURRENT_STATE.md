@@ -12,6 +12,8 @@
 - **오너 결정 대기**: 없음 (`D-012` 2026-08-17 Resolved)
 - **canon**: `docs/SETTING_BIBLE_v1.1.docx` 입고 완료 · 전문 대조 + 커버리지 감사해
   `docs/canon/` **137항목 / 15도메인** 등재 완료. 충돌 0건, PROPOSAL 0건
+- **canon 사본**: `docs/SETTING_BIBLE_v1.1.md` (자동 생성, 666문단 누락 0).
+  docx 개정 시 `tools/docx_to_md.ps1` **재실행 필수** — 안 하면 낡은 canon이 퍼진다
 - **다음 작업**: PHASE 1 (이동/카메라) — **오너 지시 전 착수 금지**
 
 ## 최근 WORK REPORT

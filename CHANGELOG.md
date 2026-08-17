@@ -42,6 +42,13 @@
   Tier 1·2 즉시 채택 → canon `SYS-009`. 1층 지형 은닉 불가 전제 → canon `SYS-014`.
   Tier 3(실제 볼륨·더미)는 BACKLOG `B-001`로 보류.
 - `docs/BACKLOG.md` — 개발 가이드 §11 운영 원칙이 요구하는 백로그 문서. B-001~B-006.
+- `docs/SETTING_BIBLE_v1.1.md` — 설정서 원본의 **마크다운 참고 사본** (오너 승인 2026-08-17).
+  GitHub를 브라우징하는 AI 에이전트가 docx 바이너리를 읽지 못해 canon 원본을 못 보는
+  문제를 해소한다. **canon이 아니며 원본이 항상 이긴다. 직접 편집 금지.**
+- `tools/docx_to_md.ps1` — 위 사본 생성기. 손으로 옮기면 canon 문구가 바뀌므로 변환은
+  기계적으로만 한다. Word 스타일(Heading/List/Table/Callout)을 마크다운으로 매핑하고,
+  **원본의 전 문단이 출력물에 남아 있는지 스스로 검증한 뒤 하나라도 빠지면 오류로 중단**한다.
+  현재 666문단 / 누락 0.
 
 ### Fixed
 - `Boot._ready()`에서 `change_scene_to_file()`을 직접 호출해 발생하던
