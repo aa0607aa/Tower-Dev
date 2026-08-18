@@ -5,6 +5,35 @@
 ## [Unreleased]
 
 ### Added
+
+- **PHASE 1 — 이동/카메라 (완료, `PLAYTESTED`).**
+  - `scripts/player/movement.gd` — 이동 계산을 **노드 없는 순수 함수**로 분리해
+    프레임 독립성·대각 정규화를 물리 없이 headless로 검증 가능하게 했다.
+  - `scripts/player/player.gd` · `scenes/player/Player.tscn` — `CharacterBody2D` 8방향 연속 이동,
+    Camera2D(드래그 여백 `0.2` · smoothing `10.0`).
+  - `scenes/world/TestRoom.tscn` — 960×640 테스트 방 + 안쪽 장애물 3개.
+    **canon 지형이 아니며 PHASE 2에서 `data/floors/floor1_fixed/` 로더로 교체한다** (`FLR-001`).
+  - `project.godot` — `move_left/right/up/down` (WASD + 방향키, physical_keycode).
+  - **자체 테스트 러너** (`D-015`) — `tests/runner.gd`(단위) + `tests/integration_runner.gd`(물리 충돌).
+    러너는 발견/실행/집계/종료 코드만 담당하고, 테스트 본문은 프레임워크 중립으로 유지한다.
+    단위 17단언 · 통합 10단언 전부 통과.
+  - `tools/run.ps1` — Godot 실행 파일을 자동 탐색하는 실행/테스트 헬퍼.
+  - 확정 DESIGN 수치: `BASE_SPEED = 160.0`(**민첩 10 기준선**, `CHR-003`).
+    `CBT-009`상 속도는 성장으로 빨라지므로 기준선을 높이면 성장 여지가 사라진다.
+    PHASE 6에서 민첩 보정과 함께 재확정한다.
+
+### Fixed (PHASE 1)
+
+- 카메라가 짧은 왕복 이동에서 헤엄치던 문제 — 여백 없이 position smoothing만 쓰면
+  카메라가 상시 추적하며 방향 전환을 반복한다. **드래그 여백(deadzone)** 을 추가해
+  짧은 이동이 여백 안에서 끝나도록 했다. 오너 PLAYTEST로 확정.
+- 통합 테스트가 **통과하지만 검증하지 않던** 문제 — 오른쪽 벽(x=950) 케이스가 안쪽 블록(x=608)에
+  막혀 x=598에서 멈췄는데 `x <= 950`이 참이라 통과했다. 각 케이스에 "목표에 실제로 도달했는지"
+  단언을 추가하고 출발점을 장애물 없는 경로로 바꿨다.
+- 테스트 러너 오탐 — 헬퍼 `test_case.gd`가 `test_*.gd` 패턴에 걸려 테스트로 오인됐다.
+  `tests/lib/`로 옮겨 구조적으로 재발하지 않게 했다.
+
+### Added
 - 협업 프로토콜 v1.0 (`COLLABORATION_PROTOCOL.md`) — 능력/환경 기준 역할표, Canon 충돌 에스컬레이션,
   WORK REPORT 핸드오프, PHASE→티켓→타당성→확정 루프, IMPLEMENTED/VERIFIED/PLAYTESTED 3단계.
 - 통합 개발 가이드라인 v2.0 (`docs/DEVELOPMENT_GUIDE.md`) — 설정서 v1.1 정합화, PHASE 0~11 로드맵.

@@ -3,10 +3,15 @@
 > 새 세션은 이 파일로 "지금 어디까지 왔는지"를 복원한다.
 > 상세 시계열과 판단 근거는 `docs/log/2026-08.md`를 우선 확인한다.
 
-## 현재 위치 — 2026-08-18 11:44 KST
+## 현재 위치 — 2026-08-18 12:34 KST
 
-- **PHASE**: 0 — 완료 (`VERIFIED`)
-- **다음 PHASE**: 1 — 이동/카메라. **오너 지시 전 구현 착수 금지**
+- **PHASE**: 1 (이동/카메라) — **완료 (`PLAYTESTED`)**
+  - 1-1 벽 충돌 · 1-2 프레임 독립성 · 1-3 대각 정규화 → VERIFIED (자동 테스트)
+  - 1-4 조작감 · 1-5 카메라 → **PLAYTESTED** (오너 확정 2026-08-18)
+- **다음 PHASE**: 2 — 1층 고정 지형 + 동적 배치. **오너 지시 전 구현 착수 금지**
+  - 착수 시 `scenes/world/TestRoom.tscn`을 버리고 `data/floors/floor1_fixed/` 로더로 교체한다.
+    테스트 방은 canon 지형이 아니다 (`FLR-001`)
+  - TileMapLayer 도입도 PHASE 2의 지형 포맷 설계와 함께 간다
 - **저장소**: `aa0607aa/Tower-Dev`, `main`
 - **엔진**: Godot `4.7.1-stable`
 - **canon 색인**: 141개 ID / 15도메인 / 통합 포인터 3개, PROPOSAL 0건
@@ -39,20 +44,42 @@
     결정성 상태 저장, 저LOD 전용 확률표 금지를 `D-014`/`NPC-005`에 추가.
   - `TEST_CHECKLIST G-7` 신규.
 
+## PHASE 1 결과 (완료)
+
+| 항목 | 결과 |
+| --- | --- |
+| `tests/runner.gd` | 자체 SceneTree 단위 러너. 발견/실행/집계/종료 코드만 |
+| `tests/integration_runner.gd` | 물리 충돌 검증용 별도 러너 |
+| `scripts/player/movement.gd` | 이동 계산을 노드 없는 순수 함수로 분리 |
+| `scripts/player/player.gd` · `scenes/player/Player.tscn` | `CharacterBody2D` + Camera2D |
+| `scenes/world/TestRoom.tscn` | 960×640 테스트 방 (**canon 지형 아님, PHASE 2에서 폐기**) |
+| `project.godot` | `move_left/right/up/down` (WASD + 방향키) |
+| `tools/run.ps1` | Godot 자동 탐색 실행/테스트 헬퍼 |
+
+자동 검증: 단위 17단언 · 통합 10단언 · 전부 통과 · exit 0.
+
+확정된 DESIGN 수치 (canon 아님, 튜닝 가능):
+
+- `Player.BASE_SPEED = 160.0` — **민첩 10 기준선** (`CHR-003`). 올리기 전 성장 여지를 계산할 것.
+  `CBT-009`상 속도는 민첩·[신속]으로 빨라지므로 기준선이 높으면 성장 여지가 사라진다.
+  **PHASE 6에서 민첩 보정(`CHR-009` 확정 후)과 함께 재확정한다.**
+- Camera2D 드래그 여백 `0.2` / `position_smoothing_speed` `10.0` — 오너 확정.
+  여백 없이 smoothing만 쓰면 짧은 왕복 이동에서 화면이 헤엄친다.
+
 ## 다음 작업
 
-오너가 PHASE 1 착수를 지시하면 구현 담당이 저장소를 실제로 확인한 뒤 티켓 타당성을 검토하고 시작한다.
-첫 구현 묶음:
+**PHASE 2 — 1층 고정 지형 + 동적 배치.** 오너 지시 전 구현 착수 금지.
 
-1. `tests/runner.gd` — 자체 SceneTree 테스트 러너 골격
-2. 이동 벡터 순수 로직 — 대각선 정규화/프레임 독립성을 자동 테스트 가능하게 분리
-3. 플레이어 임시 노드 + `CharacterBody2D` 충돌/8방향 이동
-4. 테스트 방 + 벽 충돌
-5. Camera2D
-6. headless 자동 테스트 + 창 실행 검증
-7. 오너 로컬 PLAYTESTED — 이동감/미끄러움/카메라 감각
+착수 시 유의:
 
-PHASE 1의 정확한 티켓은 구현 담당이 현재 노드 구조를 확인한 뒤 조정할 수 있다. Canon/TBD를 건드리는 변경은 금지한다.
+- `scenes/world/TestRoom.tscn`은 **버린다.** PHASE 1 검증용이며 canon 지형이 아니다.
+- 1층 지형은 `data/floors/floor1_fixed/`에서 로드한다 (`FLR-001`). **생성기를 만들지 않는다** (`FLR-003`).
+- 시드는 전리품·유배자·상태 **동적 배치 전용** (`FLR-002`).
+- 계단은 `party_stairs[]` 구조. 단일 `stair_id`로 모델링하지 않는다 (`FAC-002`).
+- 데이터 포맷 설계 시 `SYS-009` Tier 1·2를 적용한다 — 정답 테이블을 배포 파일에 두지 않고,
+  `is_dummy` 플래그나 더미 전용 폴더를 만들지 않는다.
+- TileMapLayer 도입은 이 단계의 지형 포맷 설계와 함께 간다. 구 `TileMap` 노드는 쓰지 않는다.
+- Canon/TBD를 건드리는 변경은 금지한다.
 
 ## 테스트 러너 결정 — D-015
 
