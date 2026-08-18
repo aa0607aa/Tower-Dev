@@ -36,9 +36,11 @@ func _initialize() -> void:
 	print("=== 테스트 시작 (%d 파일) ===" % paths.size())
 
 	for path in paths:
-		var script: Resource = load(path)
-		if script == null:
-			all_failures.append("%s — 스크립트를 불러오지 못했다" % path)
+		# 파스 에러가 나면 load()가 인스턴스화 불가능한 스크립트를 돌려준다.
+		# 그대로 new()를 부르면 러너 자체가 죽어 나머지 테스트가 실행되지 않는다.
+		var script := load(path) as GDScript
+		if script == null or not script.can_instantiate():
+			all_failures.append("%s — 스크립트를 불러오지 못했다 (파스 에러 확인)" % path)
 			failed_files += 1
 			continue
 

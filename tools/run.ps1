@@ -102,6 +102,11 @@ switch ($Mode) {
         exit $LASTEXITCODE
     }
     'test' {
+        # 새 class_name 스크립트는 임포트/스캔을 거쳐야 전역 등록된다.
+        # 이걸 빼면 방금 추가한 타입이 "not declared in the current scope"로 터진다.
+        Write-Host "=== 임포트 ===" -ForegroundColor Cyan
+        & $godot --headless --path $projectRoot --import | Out-Null
+        Write-Host ""
         Write-Host "=== 단위 테스트 ===" -ForegroundColor Cyan
         & $godot --headless --path $projectRoot --script res://tests/runner.gd
         $unit = $LASTEXITCODE

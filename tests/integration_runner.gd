@@ -39,9 +39,10 @@ func _run_all() -> void:
 	print("=== 통합 테스트 시작 (%d 파일) ===" % paths.size())
 
 	for path in paths:
-		var script: Resource = load(path)
-		if script == null:
-			all_failures.append("%s — 스크립트를 불러오지 못했다" % path)
+		# 파스 에러 시 load()가 인스턴스화 불가능한 스크립트를 돌려준다. 러너가 죽지 않게 막는다.
+		var script := load(path) as GDScript
+		if script == null or not script.can_instantiate():
+			all_failures.append("%s — 스크립트를 불러오지 못했다 (파스 에러 확인)" % path)
 			continue
 
 		var instance: Object = script.new()
