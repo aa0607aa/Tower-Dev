@@ -54,11 +54,28 @@ tower/
 └─ saves/                 # 로컬 테스트용 (git 제외)
 ```
 
+## 다른 PC에서 이어받기
+
+```
+git clone https://github.com/aa0607aa/Tower-Dev.git tower
+cd tower
+winget install --id GodotEngine.GodotEngine -e --version 4.7.1
+godot --path . --headless --import      # 최초 1회: 에셋 임포트
+```
+
+`.godot/` 폴더는 **일부러 저장소에 올리지 않는다.** Godot이 프로젝트를 열 때 자동 생성하는
+캐시라서, 커밋하면 PC마다 내용이 달라 매번 충돌한다. `--import` 한 번이면 재생성된다.
+
+> 새 PC에서는 렌더링 드라이버 옵션이 다를 수 있다. 아래 실행 절의 ANGLE 옵션은
+> **현재 개발 PC 전용 우회**이므로, 다른 PC에서는 먼저 옵션 없이 실행해 보고
+> 종료 시 크래시가 나면 그때만 붙인다.
+
 ## 실행
 
 ```
 godot --path . --headless --import                  # 임포트/파스 오류 확인
-godot --path . --rendering-driver opengl3_angle     # 창 실행 (ESC로 종료)
+godot --path .                                      # 창 실행 (ESC로 종료)
+godot --path . --rendering-driver opengl3_angle     # ↑가 종료 시 크래시하면 이걸로
 ```
 
 > `--rendering-driver opengl3_angle`은 **현재 개발 PC 전용 우회**다.

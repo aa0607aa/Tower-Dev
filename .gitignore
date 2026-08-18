@@ -7,8 +7,10 @@
 build/
 export/
 
-# 개발 빌드 로컬 테스트 세이브
-/saves/
+# 개발 빌드 로컬 테스트 세이브 — 내용물은 올리지 않되 폴더는 유지한다.
+# (통째로 무시하면 다른 PC에서 클론했을 때 saves/ 폴더가 아예 생기지 않는다)
+/saves/*
+!/saves/.gitkeep
 
 # OS
 .DS_Store
