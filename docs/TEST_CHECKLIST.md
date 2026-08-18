@@ -47,8 +47,8 @@ ANGLE을 강제로 쓰게 되며, 그건 개발 PC 한 대의 드라이버 버�
 
 | # | 항목 | 필요 등급 | 상태 |
 | --- | --- | --- | --- |
-| 1-1 | 테스트 방에서 벽을 뚫지 않는다 | VERIFIED | ✅ 통합 5케이스 + 오너 실제 이동 확인. **E2E 입력 경로 회귀 테스트 보강 권장** |
-| 1-2 | 30 / 60 / 120 FPS 상당의 서로 다른 delta sequence에서도 동일 시간 이동 거리가 같다 | VERIFIED | ✅ 현재 코드/단위 수학은 정합. **실제 Player physics 경로 E2E 회귀 테스트 보강 권장** |
+| 1-1 | 테스트 방에서 벽을 뚫지 않는다 | VERIFIED | ✅ 통합 5케이스 + 오너 실제 이동 확인 |
+| 1-2 | 30 / 60 / 120 FPS 상당의 서로 다른 delta sequence에서도 동일 시간 이동 거리가 같다 | VERIFIED | ✅ 단위(수학) + **E2E(실제 Player 경로)** 이중 |
 | 1-3 | 8방향 대각 이동 속도가 직선 이동보다 빠르지 않다 | VERIFIED | ✅ 4방향 전부 |
 | 1-4 | 조작감 — 미끄러움·관성이 의도대로인가 | **PLAYTESTED** | ✅ 오너 확정 2026-08-18 |
 | 1-5 | 카메라가 플레이어를 따라가고 화면이 흔들리지 않는다 | **PLAYTESTED** | ✅ 오너 확정 2026-08-18 |
@@ -58,28 +58,50 @@ ANGLE을 강제로 쓰게 되며, 그건 개발 PC 한 대의 드라이버 버�
 > 카메라에 **드래그 여백**을 추가하고(`0.2`, smoothing `10.0`) 2차에서 확정받았다.
 >
 > GPT 독립 코드 리뷰에서 현재 `player.gd`가 `CharacterBody2D.velocity` + `move_and_slide()`를
-> 올바르게 사용해 delta를 중복 곱하지 않는 것을 확인했다. 다만 자동 테스트 연결성에는 다음 부채가 있다:
+> 올바르게 사용해 delta를 중복 곱하지 않는 것을 확인했다.
+> 함께 지적된 회귀 테스트 부채 3건은 **PHASE 2 착수 전에 전부 해소했다 (2026-08-18)**:
 >
-> - **P1-TEST-001**: `test_movement.gd`의 프레임 독립성은 `Movement.step()`을 검사하지만 실제 Player는
->   이 함수를 사용하지 않는다. 미래에 Player 코드에 delta 중복 곱 버그가 생겨도 단위 테스트가 통과할 수 있다.
-> - **P1-TEST-002**: `integration_runner.gd`는 Player의 입력/_physics_process를 거치지 않고 직접
->   `velocity`를 넣어 `move_and_slide()`를 호출하므로, 충돌 시스템은 검증하지만 실제 컨트롤 경로 회귀는 잡지 못한다.
+> - **P1-TEST-001 해소** — `tests/integration/test_player_movement_e2e.gd` 추가.
+>   `Input.action_press()` → `Player._physics_process()` → `move_and_slide()`의 **실제 경로**를 통과한다.
+> - **P1-TEST-002 해소** — `integration_runner.gd`를 harness로만 남기고 케이스를
+>   `tests/integration/`으로 분리했다 (`D-015` 원칙 1).
+> - **P1-TOOL-001 해소** — `tools/run.ps1`이 Godot 버전을 확인하고 `4.7.1`이 아니면 경고한다.
 >
-> **PHASE 2에서 통합 테스트가 늘기 전에 실제 Player/Input/physics 경로를 거치는 최소 E2E 테스트를 추가한다.**
-> 이 두 항목은 현재 PHASE 1 구현 오류가 아니라 회귀 테스트 구조 보강 사항이다.
+> ### 지적이 옳았음을 변이 테스트로 증명했다
+>
+> `player.gd`에 `velocity *= delta`(delta 중복 곱)를 주입하고 돌린 결과:
+>
+> | 시점 | 단위 | 통합 | 결과 |
+> | --- | --- | --- | --- |
+> | 보강 **전** | 17단언 통과 | 10단언 통과 | **버그를 못 잡음** (플레이어가 초당 2.7px로 기어감) |
+> | 보강 **후** | 17단언 통과 | **4단언 실패** | 잡음 — 30/60/120 tick에서 각각 2.67 / 1.33 / 0.67px |
+>
+> 틱레이트가 두 배가 될 때마다 거리가 절반이 되는 것이 프레임 의존성의 서명이다.
+> **테스트를 추가할 때는 "실제로 실행되는 경로를 통과하는가"를 항상 확인할 것.**
+> 아무도 호출하지 않는 함수를 검사하는 테스트는 초록불만 줄 뿐 아무것도 지키지 않는다.
 >
 > `BASE_SPEED`(160, 민첩 10 기준선)는 **PHASE 6에서 민첩 보정과 함께 재확정**한다.
 
 ### 실행
 
 ```
+powershell -ExecutionPolicy Bypass -File tools/run.ps1 -Mode test      # 둘 다 (권장)
+
 godot --headless --path . --script res://tests/runner.gd              # 단위 (순수 로직)
-godot --headless --path . --script res://tests/integration_runner.gd  # 통합 (물리·충돌)
+godot --headless --path . --script res://tests/integration_runner.gd  # 통합 (물리)
 ```
 
-현재 `tests/integration_runner.gd`에는 물리 harness와 충돌 테스트 케이스가 함께 있다.
-D-015의 runner/harness 책임을 장기적으로 단순하게 유지하려면 PHASE 2에서 통합 테스트가 늘기 전에
-`test_player_collision` 같은 케이스를 별도 파일로 분리하는 것을 권장한다.
+```
+tests/
+  runner.gd              # 단위 harness — tests/test_*.gd 탐색
+  integration_runner.gd  # 통합 harness — tests/integration/test_*.gd 탐색
+  lib/                   # 헬퍼 (탐색에서 제외되도록 하위 폴더에 둔다)
+  test_*.gd              # 단위 케이스
+  integration/test_*.gd  # 통합 케이스 — run(tree, t), await tree.physics_frame
+```
+
+harness 두 개 모두 **발견/실행/집계/종료 코드만** 담당한다 (`D-015` 원칙 1).
+테스트 로직을 harness에 넣지 않는다.
 
 > **1-1 케이스를 추가할 때 반드시 지킬 것**: "경계를 넘지 않았다"만 단언하면
 > **엉뚱한 장애물에 막혀도 통과한다.** 초기 구현이 실제로 그랬다 — 오른쪽 벽(x=950) 테스트가

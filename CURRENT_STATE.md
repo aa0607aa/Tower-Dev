@@ -78,40 +78,32 @@
 - 테스트 방의 외벽/내부 장애물 collision 좌표와 integration test의 기대 접촉 좌표가 일치한다.
 - Canon/TBD를 새로 굳힌 구현은 발견하지 않았다.
 
-다만 **자동 회귀 테스트의 연결성에 보강할 부분 2건**이 있다. 현재 구현이 틀렸다는 뜻은 아니며,
-PHASE 2부터 테스트가 커지기 전에 정리하는 것을 권장한다.
+**보강 권고 3건은 PHASE 2 착수 전에 전부 해소했다 (구현 담당, 2026-08-18).**
 
-1. **P1-TEST-001 — 프레임 독립성 테스트가 실제 Player 경로를 직접 검증하지 않는다.**
-   `test_movement.gd`의 30/60/120·불규칙 delta 테스트는 `Movement.step()`을 검사하지만,
-   실제 `player.gd`는 `Movement.step()`을 호출하지 않고 `move_and_slide()`를 사용한다.
-   따라서 미래에 `player.gd`에서 실수로 delta를 한 번 더 곱해도 해당 단위 테스트는 계속 통과할 수 있다.
-   → 실제 Player/Input/physics 경로를 거치는 최소 E2E 회귀 테스트를 하나 추가 권장.
+- **P1-TEST-001 해소** — `tests/integration/test_player_movement_e2e.gd` 추가.
+  `Input.action_press()` → `Player._physics_process()` → `move_and_slide()`의 실제 경로를 통과한다.
+- **P1-TEST-002 해소** — `integration_runner.gd`를 harness로만 남기고 케이스를 `tests/integration/`으로 분리.
+- **P1-TOOL-001 해소** — `tools/run.ps1`이 Godot 버전을 확인하고 `4.7.1`이 아니면 경고한다.
 
-2. **P1-TEST-002 — `integration_runner.gd`가 runner/harness와 실제 테스트 케이스를 한 파일에 함께 가진다.**
-   현재는 5케이스뿐이라 동작하지만 `D-015`의 "러너는 발견/실행/집계/종료 중심" 원칙과 장기적으로 어긋날 수 있다.
-   → PHASE 2에서 통합 테스트가 늘기 전에 물리 harness와 `test_player_collision` 같은 케이스를 분리 권장.
+### 지적이 옳았음을 변이 테스트로 증명
 
-낮은 우선순위:
+`player.gd`에 `velocity *= delta`를 주입하고 돌렸다.
 
-- **P1-TOOL-001** — `tools/run.ps1`은 PATH의 임의 `godot` 또는 이름순 설치본을 사용하므로
-  향후 여러 Godot 버전이 설치되면 프로젝트 기준 `4.7.1`이 아닌 버전으로 테스트할 수 있다.
-  버전 확인/경고를 넣으면 재현성이 좋아진다.
+| 시점 | 결과 |
+| --- | --- |
+| 보강 전 | 단위 17 + 통합 10 **전부 통과** — 플레이어가 초당 2.7px로 기어가는데도 |
+| 보강 후 | E2E **4단언 실패** — 30/60/120 tick에서 2.67 / 1.33 / 0.67px |
 
-> 이 ChatGPT 세션에는 Godot 실행 바이너리가 없어 런타임을 독립 재실행하지 못했다.
-> 따라서 실행 결과 자체는 구현 담당의 기록과 오너 PLAYTEST를 근거로 유지하고,
-> 이번 검수는 GitHub 코드/diff·테스트 설계·Canon 정합성의 독립 리뷰다.
+교훈: **아무도 호출하지 않는 함수를 검사하는 테스트는 초록불만 줄 뿐 아무것도 지키지 않는다.**
+테스트를 추가할 때 "실제로 실행되는 경로를 통과하는가"를 항상 확인한다.
+
+현재 테스트: 단위 17단언 · 통합 17단언 (충돌 10 + E2E 7) · 전부 통과 · exit 0.
 
 ## 다음 작업
 
 **PHASE 2 — 1층 고정 지형 + 동적 배치.** 오너 지시 전 구현 착수 금지.
 
-PHASE 2 첫 묶음 전에 권장하는 짧은 정리:
-
-1. `P1-TEST-001` 실제 Player 경로 E2E 이동 회귀 테스트 추가
-2. `P1-TEST-002` 통합 테스트 harness/케이스 분리
-3. 가능하면 `P1-TOOL-001` Godot 4.7.1 버전 확인 추가
-
-그 뒤 PHASE 2 착수 시:
+선행 정리(P1-TEST-001/002, P1-TOOL-001)는 **완료**했다. PHASE 2 착수 시:
 
 - `scenes/world/TestRoom.tscn`은 **버린다.** PHASE 1 검증용이며 canon 지형이 아니다.
 - 1층 지형은 `data/floors/floor1_fixed/`에서 로드한다 (`FLR-001`). **생성기를 만들지 않는다** (`FLR-003`).

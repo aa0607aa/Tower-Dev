@@ -63,9 +63,28 @@ Godot 실행 파일을 찾지 못했다.
 "@
 }
 
+## 프로젝트가 요구하는 Godot 버전. project.godot의 config/features와 맞춘다.
+$RequiredVersion = '4.7.1'
+
 $godot = Find-Godot
 Write-Host "Godot: $godot"
 Write-Host "프로젝트: $projectRoot"
+
+# P1-TOOL-001: 여러 Godot 버전이 설치돼 있으면 Find-Godot이 엉뚱한 것을 고를 수 있다.
+# 다른 버전으로 테스트가 돌면 "통과했는데 실제로는 다른 엔진" 상황이 되므로 경고한다.
+# 막지는 않는다 — 의도적으로 다른 버전을 시험해 볼 수도 있다.
+$versionLine = (& $godot --version 2>&1 | Select-Object -First 1) -as [string]
+if ($versionLine) {
+    Write-Host "버전: $versionLine"
+    if ($versionLine -notmatch [regex]::Escape($RequiredVersion)) {
+        Write-Host ""
+        Write-Host "!! 경고: 프로젝트 요구 버전은 $RequiredVersion 인데 실행 파일은 '$versionLine' 이다." -ForegroundColor Yellow
+        Write-Host "   테스트 결과의 재현성을 보장할 수 없다. 설치:" -ForegroundColor Yellow
+        Write-Host "   winget install --id GodotEngine.GodotEngine -e --version $RequiredVersion" -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "!! 경고: Godot 버전을 확인하지 못했다." -ForegroundColor Yellow
+}
 Write-Host ""
 
 $renderArgs = @()
