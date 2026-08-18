@@ -26,10 +26,10 @@
 | `docs/log/YYYY-MM.md` | 월별 요청·작업·근거·다음 AI 인계의 시계열 기록 |
 | `docs/DEVELOPMENT_GUIDE.md` | 통합 개발 가이드라인 v2.0 (구현 방식) |
 | `docs/SETTING_BIBLE_v1.1_README.md` | 세계관 canon 원본 배치 안내 |
-| **`docs/SETTING_BIBLE_v1.1.docx`** | **세계관 canon 원본 — 진실. 충돌 시 항상 이긴다** |
+| **`docs/SETTING_BIBLE_v1.1.docx`** | **세계관 canon 원본. 단, 이후 오너 직접 확정은 DECISIONS와 함께 우선 적용** |
 | `docs/SETTING_BIBLE_v1.1.md` | 위의 자동 생성 사본 (canon 아님 · 직접 편집 금지) |
 | `tools/docx_to_md.ps1` | 사본 생성기 — docx 개정 시 재실행 |
-| **`docs/canon/INDEX.md`** | **Canon 전체 색인 (141개 ID / 15도메인) — 찾을 때 여기부터** |
+| **`docs/canon/INDEX.md`** | **Canon 전체 색인 (148개 ID / 15도메인) — 찾을 때 여기부터** |
 | `docs/canon/README.md` | Canon 색인 체계의 정의 (ID 규칙·상태·작성법) |
 | `docs/CANON_NOTES.md` | (비움 — `docs/canon/`으로 통합) |
 | `docs/DATAMINING_POLICY.md` | 데이터 마이닝 대응 정책 (승인됨 — D-012) |
@@ -104,4 +104,7 @@ godot --headless --path . --script res://tests/integration_runner.gd  # 통합 �
 
 ## 진실의 우선순위
 
-오너 직접 지시/승인 → 설정서 v1.1 → DECISIONS.md의 Resolved → 개발 가이드(구현 방식에 한해) → 미승인 Proposal. 세계 설정이 충돌하면 항상 설정서 v1.1이 이긴다.
+**오너 직접 지시/승인 → 설정서 v1.1 최신본 → DECISIONS.md의 Resolved → 개발 가이드(구현 방식에 한해) → 미승인 Proposal.**
+
+설정서 통합본에서 누락된 규칙을 오너가 직접 재확인한 경우에는 오너 직접 지시가 우선하며,
+그 후속 규칙은 `DECISIONS.md`와 `docs/canon/INDEX.md`의 정본 외 유래 표에 반드시 기록한다.
