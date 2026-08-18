@@ -8,15 +8,15 @@
 
 - **PHASE 1 — 이동/카메라 (완료, `PLAYTESTED`).**
   - `scripts/player/movement.gd` — 이동 계산을 **노드 없는 순수 함수**로 분리해
-    프레임 독립성·대각 정규화를 물리 없이 headless로 검증 가능하게 했다.
+    대각 정규화 등 핵심 수학을 headless로 검증 가능하게 했다.
   - `scripts/player/player.gd` · `scenes/player/Player.tscn` — `CharacterBody2D` 8방향 연속 이동,
     Camera2D(드래그 여백 `0.2` · smoothing `10.0`).
   - `scenes/world/TestRoom.tscn` — 960×640 테스트 방 + 안쪽 장애물 3개.
     **canon 지형이 아니며 PHASE 2에서 `data/floors/floor1_fixed/` 로더로 교체한다** (`FLR-001`).
   - `project.godot` — `move_left/right/up/down` (WASD + 방향키, physical_keycode).
-  - **자체 테스트 러너** (`D-015`) — `tests/runner.gd`(단위) + `tests/integration_runner.gd`(물리 충돌).
-    러너는 발견/실행/집계/종료 코드만 담당하고, 테스트 본문은 프레임워크 중립으로 유지한다.
-    단위 17단언 · 통합 10단언 전부 통과.
+  - **자체 테스트 인프라** (`D-015`) — `tests/runner.gd`(단위 발견/실행/집계) +
+    `tests/integration_runner.gd`(현재 물리 harness와 충돌 케이스 포함).
+    단위 17단언 · 통합 10단언 전부 통과(구현 담당 실행 기록).
   - `tools/run.ps1` — Godot 실행 파일을 자동 탐색하는 실행/테스트 헬퍼.
   - 확정 DESIGN 수치: `BASE_SPEED = 160.0`(**민첩 10 기준선**, `CHR-003`).
     `CBT-009`상 속도는 성장으로 빨라지므로 기준선을 높이면 성장 여지가 사라진다.
@@ -95,16 +95,27 @@
   - `D-014`/`NPC-005`에 RNG 스트림 독립, 승격 전 catch-up, 동시 사건 안정 순서,
     논리 시각 이벤트 반영/예약, `last_sim_tick` 등 결정성 상태 저장, 저LOD 전용 확률표 금지 추가.
 
+- **PHASE 1 독립 후속 검수 (GPT, 2026-08-18)**
+  - 실제 이동 코드가 Godot 4.7의 `CharacterBody2D.velocity`/`move_and_slide()` 사용 방식과 정합함을 확인.
+  - Phase 1을 되돌릴 코드 결함이나 Canon/TBD 위반은 발견하지 않음.
+  - 회귀 테스트 보강 2건을 기록: `P1-TEST-001` 실제 Player 경로 프레임 독립성 E2E,
+    `P1-TEST-002` integration harness와 테스트 케이스 분리.
+  - `tools/run.ps1`의 Godot 4.7.1 버전 확인은 낮은 우선순위 재현성 보강(`P1-TOOL-001`).
+
 ### Fixed
 - `Boot._ready()`의 즉시 씬 전환으로 발생하던 `Parent node is busy adding/removing children` 오류를
   한 프레임 대기 후 전환하도록 수정.
 - Canon 색인의 원문보다 강한 요약/과소·오인 출처와 내용 중복을 교정.
 - `CURRENT_STATE.md`와 월간 로그의 인계 상태 불일치를 동기화.
 - Markdown 파일 끝 LF 누락을 복구하고, 다음 작업에서도 유지하도록 로그에 규칙 기록.
+- README의 협업 시작 읽기 순서를 `COLLABORATION_PROTOCOL.md §3.2`와 동기화하고 Canon 색인 수를 141로 정정.
+- PHASE 1 완료 뒤에도 남아 있던 CHANGELOG/CURRENT_STATE의 착수 전 문구와 오래된 WORK REPORT를 정리.
 
 ### Notes
 - **PHASE 0 완료 (VERIFIED).** 실행/종료/Git push 확인, ESC 종료는 오너 직접 확인.
 - **G-1~G-5 모두 완료.** PHASE 1의 문서상 선행조건은 해소됐다.
-- PHASE 1은 **오너의 별도 착수 지시 전 시작하지 않는다.** 착수 시 `tests/runner.gd` + 이동/카메라 구현부터.
+- **PHASE 1 완료 (`PLAYTESTED`).** 구현 담당 자동/런타임 테스트 기록과 오너 2차 플레이 승인이 있다.
+- GPT 독립 후속 검수에서 현재 코드 차단 결함은 발견하지 않았고, 테스트 구조 보강 2건을 PHASE 2 확대 전에 권장했다.
+- **다음은 PHASE 2 착수 지시 대기.** 오너 지시 전 시작하지 않는다.
 - 개발 PC 네이티브 OpenGL 종료 크래시는 빈 프로젝트에서도 재현되는 환경 이슈다.
   필요 시 로컬 실행에서 `--rendering-driver opengl3_angle` 사용하며 프로젝트 배포 설정에는 고정하지 않는다.
