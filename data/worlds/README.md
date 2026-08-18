@@ -12,7 +12,7 @@ data/worlds/<world_id>/
   geology_profile.json
 ```
 
-`geology_profile.json`은 `../geology_profile.schema.json`을 따른다.
+`geology_profile.json`은 `data/worlds/geology_profile.schema.json`을 따른다.
 
 최소한 다음을 기록한다.
 
