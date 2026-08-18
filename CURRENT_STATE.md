@@ -9,9 +9,10 @@
 - **저장소**: `https://github.com/aa0607aa/Tower-Dev.git` · `main` 브랜치
 - **엔진**: Godot **4.7.1-stable** (`4.7.1.stable.official.a13da4feb`) 설치·실행 확인됨
 - **현재 작업**: PHASE 1 착수 전 **설정(canon) 체계 정비 중** — 오너 지시
-- **오너 결정 대기**: 없음 (`D-012` 2026-08-17 Resolved)
-- **canon**: `docs/SETTING_BIBLE_v1.1.docx` 입고 완료 · 전문 대조 + 커버리지 감사해
-  `docs/canon/` **137항목 / 15도메인** 등재 완료. 충돌 0건, PROPOSAL 0건
+- **오너 결정 대기**: 없음 (`D-012`·`D-013`·`D-014` 모두 2026-08-17 Resolved)
+- **canon**: `docs/SETTING_BIBLE_v1.1.docx` 입고 완료 · 전문 대조 + 커버리지 감사 +
+  설계 담당(GPT) 교차검증까지 마쳐 `docs/canon/` **141항목 / 15도메인** 등재 완료.
+  PROPOSAL 0건
 - **canon 사본**: `docs/SETTING_BIBLE_v1.1.md` (자동 생성, 666문단 누락 0).
   docx 개정 시 `tools/docx_to_md.ps1` **재실행 필수** — 안 하면 낡은 canon이 퍼진다
 - **다음 작업**: PHASE 1 (이동/카메라) — **오너 지시 전 착수 금지**
