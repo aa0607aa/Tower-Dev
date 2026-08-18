@@ -72,10 +72,26 @@ godot --path . --headless --import      # 최초 1회: 에셋 임포트
 
 ## 실행
 
+`tools/run.ps1`이 Godot 실행 파일을 자동으로 찾는다. PATH에 `godot`이 없어도 된다.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/run.ps1              # 게임 실행 (기본)
+powershell -ExecutionPolicy Bypass -File tools/run.ps1 -Mode test   # 자동 테스트 전부
+powershell -ExecutionPolicy Bypass -File tools/run.ps1 -Mode editor # Godot 에디터로 열기
+powershell -ExecutionPolicy Bypass -File tools/run.ps1 -Mode import # 클론 직후 1회
 ```
-godot --path . --headless --import                  # 임포트/파스 오류 확인
-godot --path .                                      # 창 실행 (ESC로 종료)
-godot --path . --rendering-driver opengl3_angle     # ↑가 종료 시 크래시하면 이걸로
+
+`play`/`editor`에서는 ANGLE이 자동으로 켜진다(현재 개발 PC의 종료 크래시 우회).
+다른 PC에서는 `-Angle:$false`로 꺼서 먼저 시도해 볼 것.
+
+직접 실행하려면:
+
+```
+godot --path . --headless --import                              # 임포트/파스 오류 확인
+godot --path .                                                  # 창 실행 (ESC로 종료)
+godot --path . --rendering-driver opengl3_angle                 # ↑가 종료 시 크래시하면
+godot --headless --path . --script res://tests/runner.gd        # 단위 테스트
+godot --headless --path . --script res://tests/integration_runner.gd  # 통합 테스트
 ```
 
 > `--rendering-driver opengl3_angle`은 **현재 개발 PC 전용 우회**다.
