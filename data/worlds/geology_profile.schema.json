@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tower://schemas/geology_profile.schema.json",
+  "title": "Tower world geology profile",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "status",
+    "world_id",
+    "terrain_body_id",
+    "body_name",
+    "body_type",
+    "layers",
+    "regional_profiles"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "status": { "enum": ["CANON", "DESIGN", "TBD"] },
+    "world_id": { "type": "string", "minLength": 1 },
+    "terrain_body_id": { "type": "string", "minLength": 1 },
+    "body_name": { "type": "string", "minLength": 1 },
+    "body_type": {
+      "enum": ["planet", "moon", "asteroid", "artificial", "other"]
+    },
+    "radius_m": {
+      "type": ["number", "null"],
+      "exclusiveMinimum": 0
+    },
+    "notes": { "type": "string" },
+    "layers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "layer_id",
+          "name",
+          "outer_depth_m",
+          "inner_depth_m",
+          "material_percent"
+        ],
+        "properties": {
+          "layer_id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "outer_depth_m": {
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "inner_depth_m": {
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "material_percent": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            }
+          },
+          "notes": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "regional_profiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "region_id",
+          "material_percent"
+        ],
+        "properties": {
+          "region_id": { "type": "string", "minLength": 1 },
+          "surface_coverage_percent": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "maximum": 100
+          },
+          "depth_from_m": {
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "depth_to_m": {
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "material_percent": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            }
+          },
+          "notes": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
