@@ -35,7 +35,7 @@
 
 **이 PC의 개발용 실행 명령은 ANGLE을 쓴다:**
 
-```
+```bash
 godot --path . --rendering-driver opengl3_angle
 ```
 
@@ -48,7 +48,7 @@ ANGLE을 강제로 쓰게 되며, 그건 개발 PC 한 대의 드라이버 버�
 | # | 항목 | 필요 등급 |
 | --- | --- | --- |
 | 1-1 | 테스트 방에서 벽을 뚫지 않는다 | VERIFIED |
-| 1-2 | 30 / 60 / 120 FPS에서 이동 속도가 동일하다 (프레임 독립성) | VERIFIED |
+| 1-2 | 30 / 60 / 120 FPS 상당의 서로 다른 delta sequence에서도 동일 시간 이동 거리가 같다 | VERIFIED |
 | 1-3 | 8방향 대각 이동 속도가 직선 이동보다 빠르지 않다 | VERIFIED |
 | 1-4 | 조작감 — 미끄러움·관성이 의도대로인가 | **PLAYTESTED** |
 
@@ -91,18 +91,30 @@ ANGLE을 강제로 쓰게 되며, 그건 개발 PC 한 대의 드라이버 버�
 | G-4 | **결정성**: 모든 랜덤은 시드 또는 결과가 저장돼 재로드 시 동일 복원 | VERIFIED |
 | G-5 | AI가 GameState를 직접 mutate하는 코드 경로가 없다 | VERIFIED |
 | G-6 | 스탯이 STR/AGI/INT 3종뿐이고 6스탯 잔재가 없다 | VERIFIED |
+| G-7 | **NPC LOD 불변성**: 동일 seed/논리 시간에서 플레이어 경로로 LOD 승격·강등 시점이 달라도 NPC Canon 상태와 외부 사건 로그가 동일하다 | VERIFIED |
 
 ---
 
-## 테스트 실행 방법
+## 테스트 실행 방법 — D-015
 
-PHASE 0 시점에는 자동 테스트 러너가 아직 없다. `tests/`는 구조만 잡혀 있으며,
-러너 도입(GUT 등 외부 플러그인 vs 자체 `SceneTree` 스크립트)은 **PHASE 1 착수 시 결정**한다.
-개발 가이드 §B5: 외부 플러그인은 실제로 시간을 줄일 때만, 오너에게 먼저 알리고 도입한다.
+PHASE 1부터 자동 테스트 러너는 **자체 `SceneTree` 스크립트**를 사용한다.
+GUT 같은 외부 플러그인은 현재 도입하지 않는다.
 
-현재 수동 실행:
-
+```bash
+godot --headless --path . --script res://tests/runner.gd
 ```
-godot --path . --headless --quit      # 임포트/파스 오류 확인
-godot --path .                        # 실제 창 실행 (ESC로 종료)
+
+러너 계약:
+
+- `tests/runner.gd`는 발견/실행/집계/종료 코드만 담당한다.
+- 실제 테스트 로직은 가능한 한 순수 함수와 작은 assertion helper로 작성해 **프레임워크 중립**으로 유지한다.
+- 테스트 1개라도 실패하면 non-zero exit code.
+- runner/helper 유지비가 커지거나 fixture/mock/비동기/리포팅 요구가 반복되면 GUT 등 외부 프레임워크를 재검토한다.
+
+기존 smoke test도 병행한다:
+
+```bash
+godot --headless --path . --import
+godot --headless --path . --quit-after 180
+godot --path .                         # 실제 창 실행 (개발 PC는 필요 시 ANGLE 옵션)
 ```
