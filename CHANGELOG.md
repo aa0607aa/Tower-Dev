@@ -5,75 +5,77 @@
 ## [Unreleased]
 
 ### Added
-- 협업 프로토콜 v1.0 (`COLLABORATION_PROTOCOL.md`) — 능력/환경 기준 역할표, Canon 충돌 에스컬레이션, WORK REPORT 핸드오프, PHASE→티켓→타당성→확정 루프, IMPLEMENTED/VERIFIED/PLAYTESTED 3단계.
+- 협업 프로토콜 v1.0 (`COLLABORATION_PROTOCOL.md`) — 능력/환경 기준 역할표, Canon 충돌 에스컬레이션,
+  WORK REPORT 핸드오프, PHASE→티켓→타당성→확정 루프, IMPLEMENTED/VERIFIED/PLAYTESTED 3단계.
 - 통합 개발 가이드라인 v2.0 (`docs/DEVELOPMENT_GUIDE.md`) — 설정서 v1.1 정합화, PHASE 0~11 로드맵.
-- 결정 이력 초기화 (`DECISIONS.md`) — D-001~D-011 Resolved, TBD 목록.
+- 결정 이력 (`DECISIONS.md`) — D-001~D-015 Resolved, TBD 목록.
 - 현재 상태(`CURRENT_STATE.md`) / 변경 이력(`CHANGELOG.md`) / README / Godot `.gitignore` 스캐폴딩.
+- 월 단위 작업 로그 `docs/log/` — 요청·작업·근거·다음 AI 인계·오너 결정 필요·산출물을 시계열 기록.
 
 - **PHASE 0 — 프로젝트 뼈대**
   - `project.godot` (Godot 4.7.1 stable, GL Compatibility, nearest 텍스처 필터, 1280×720).
-  - 최소 실행 씬: `scenes/boot/Boot.tscn` → `scenes/world/Main.tscn` (게임 로직 없음, ESC 종료).
-  - `scripts/core/game_log.gd` autoload — 콘솔 로그 전용, GameState 미접근.
-  - `data/canon/canon.gd` — DECISIONS.md의 [Resolved] 상수만 (서든데스 3600초, 평균 스탯 10,
-    오르골 8/12/14 참고값, 수명 100년, 타일 32px). [TBD] 수치는 넣지 않음.
-  - 개발 가이드 §6 폴더 구조 전체 생성 (assets/data/scenes/scripts/tests/saves).
-  - `docs/CANON_NOTES.md` · `docs/CODING_STYLE.md` · `docs/TEST_CHECKLIST.md` ·
-    `assets/STYLE_GUIDE.md` · `tests/README.md`.
-  - `.gitattributes` — LF 정규화(Godot 에디터의 CRLF 재저장으로 인한 전체 diff 방지).
+  - 최소 실행 씬: `scenes/boot/Boot.tscn` → `scenes/world/Main.tscn`.
+  - `scripts/core/game_log.gd` autoload.
+  - `data/canon/canon.gd` — Resolved 상수만, TBD 수치 없음.
+  - 개발 가이드 §6 폴더 구조, 코딩/테스트/스타일 문서.
 
-- **세계관 canon 원본** `docs/SETTING_BIBLE_v1.1.docx` 저장소 배치 (오너).
-- **Canon 색인 체계** (`docs/canon/`) — 설정서 v1.1 전문(§0~§27)을 대조해 canon을 ID 붙은
-  낱개 항목 **133개 / 15개 도메인**으로 분해했다. `INDEX.md` 하나로 전체를 훑고,
-  `FLR-004`·`RAC-002` 같은 ID로 코드 주석에서 근거를 인용한다.
-  설정서 §26의 미정 영역 12개를 전부 TBD로 매핑해 다음 세션이 빈칸을 지어내는 사고를 차단한다.
-  - `README.md`(체계 정의·대조 결과) · `INDEX.md`(색인)
-  - `WLD`10 `HIS`5 `FLR`21 `CHR`19 `RAC`3 `SKL`9 `CBT`13 `MAG`5
-    `ITM`6 `FAC`11 `NPC`4 `KGD`7 `DGN`5 `GOD`5 `SYS`14 = **137항목**
-  - **[CANON CONFLICT] 0건** — 개발 가이드 v2.0과 설정서 v1.1은 정합했다.
-  - 등재 후 **절 단위 커버리지 감사**에서 누락 4건을 찾아 보완했다:
-    §0.2(→`SYS-013`) · §6.4 대거 특성(→`FLR-007`) · §10.1(→`CHR-018`) · §24.2(→`CHR-019`).
-  - **설계 담당(GPT) 교차검증** 6건 반영 → 141항목:
-    `CHR-020`(레벨당 1포인트 분리) · `KGD-008`(직업 문화 충돌) · `NPC-005`(시뮬레이션 LOD) ·
-    `RAC-004`(종족은 열린 목록) · `FAC-004` 보강(인식 전 NPC 행동) · `KGD-001` 복원.
-  - **판단 근거 감사** (오너 지적) — 출처는 141/141 있었으나 **판단 근거는 20/141뿐**이었다.
-    항목 형식에 **판단** 필드를 추가하고, 해석이 들어간 DESIGN·혼합 항목 전부에 backfill.
-    설정서 §26이 미정으로 남긴 순수 TBD 10건은 판단이 개입한 적이 없어 면제.
-  - 감사 중 **내용 중복 2건** 발견·정리 — `WLD-008`→`ITM-002`, `WLD-009`→`HIS-002`+`HIS-004`.
-    2차에서 `HIS`·`ITM` 도메인을 신설하며 재등재하고 원본 항목을 지우지 않아 생겼다.
-    ID는 재사용하지 않으므로 포인터로 남긴다.
-  - 정합성 검증: ID 중복 0 · 도메인 개수 색인 일치 · PROPOSAL 잔존 0 ·
-    DESIGN/TBD 항목의 판단 누락 0.
-- `DECISIONS.md` **`D-013`** — 설정서에 없는 성장 규칙 3건(레벨당 1포인트, 레벨·경험치 초기화)을
-  오너 결정으로 확정하고 출처를 정정. **원문 대조로 발견한 등재 오류를 바로잡은 것.**
-- `DECISIONS.md` **`D-014`** — NPC 시뮬레이션 LOD 채택. 텍스트 RPG 시절의 턴 기반 설계를
-  반실시간 틱으로 옮기되, ① 엔진이 NPC를 움직이고 AI는 별개 축(`SYS-007`),
-  ② 간략 시뮬레이션도 결정적이어야 함(`SYS-003`)을 명시.
+- **세계관 canon 원본** `docs/SETTING_BIBLE_v1.1.docx` + AI 검수용 기계 변환 사본
+  `docs/SETTING_BIBLE_v1.1.md` (직접 편집 금지, 원본 우선).
+- `tools/docx_to_md.ps1` — 설정서 docx→md 변환 및 문단 누락 자기검증.
+- **Canon 색인 체계** (`docs/canon/`) — 141개 ID / 15도메인. ID는 재사용하지 않고,
+  내용 중복을 제거한 항목은 포인터로 유지한다.
+- `docs/BACKLOG.md` — B-001~B-006.
+- `docs/DATAMINING_POLICY.md` — D-012 데이터 마이닝 정책 근거.
+- **D-013** — 설정서에 없던 성장 규칙(레벨당 1포인트, 레벨/XP 초기화)을 오너 결정으로 추적.
+- **D-014** — NPC 시뮬레이션 LOD. 거리·중요도에 따라 갱신 빈도를 낮추되 엔진 시뮬레이션과 AI 호출 예산을 분리.
+- **D-015** — PHASE 1부터 자동 테스트 러너를 **자체 `SceneTree` 스크립트**로 사용.
+  테스트 본문은 순수 함수 + 작은 assertion helper 중심으로 프레임워크 중립 유지.
+  GUT은 fixture/mock/비동기/리포팅 등으로 자체 러너 유지비가 실제로 커질 때 재검토.
+- `TEST_CHECKLIST G-7` — **NPC LOD 불변성** 회귀 테스트. 동일 seed/논리 시간에서 LOD 전환 시점이 달라도
+  NPC Canon 상태와 외부 사건 로그가 동일해야 한다.
 
 ### Changed
-- `docs/CANON_NOTES.md` 내용을 `docs/canon/`으로 통합하고 포인터만 남겼다.
-  같은 canon을 두 곳에 두면 반드시 어긋나기 때문이다.
-- `docs/DATAMINING_POLICY.md` — 데이터 마이닝 대응 정책 타당성 검토.
-- `DECISIONS.md` **`D-012` [Resolved]** (오너 승인 2026-08-17) — 데이터 마이닝 정책.
-  Tier 1·2 즉시 채택 → canon `SYS-009`. 1층 지형 은닉 불가 전제 → canon `SYS-014`.
-  Tier 3(실제 볼륨·더미)는 BACKLOG `B-001`로 보류.
-- `docs/BACKLOG.md` — 개발 가이드 §11 운영 원칙이 요구하는 백로그 문서. B-001~B-006.
-- `docs/SETTING_BIBLE_v1.1.md` — 설정서 원본의 **마크다운 참고 사본** (오너 승인 2026-08-17).
-  GitHub를 브라우징하는 AI 에이전트가 docx 바이너리를 읽지 못해 canon 원본을 못 보는
-  문제를 해소한다. **canon이 아니며 원본이 항상 이긴다. 직접 편집 금지.**
-- `tools/docx_to_md.ps1` — 위 사본 생성기. 손으로 옮기면 canon 문구가 바뀌므로 변환은
-  기계적으로만 한다. Word 스타일(Heading/List/Table/Callout)을 마크다운으로 매핑하고,
-  **원본의 전 문단이 출력물에 남아 있는지 스스로 검증한 뒤 하나라도 빠지면 오류로 중단**한다.
-  현재 666문단 / 누락 0.
+- `docs/CANON_NOTES.md` 내용을 `docs/canon/`으로 통합하고 포인터만 유지.
+- D-012 데이터 마이닝 정책: Tier 1·2 채택, 1층 지형 은닉 불가 전제 확정, Tier 3은 B-001로 보류.
+- B-004 자동 테스트 러너는 **D-015로 종료**. GUT vs 자체 러너 미정 상태 해소.
+- `tests/README.md`, `docs/TEST_CHECKLIST.md`에 자체 SceneTree 러너 계약과 실행 경로를 기록.
+
+- **G-2 출처 정확성 감사**
+  - `SETTING_BIBLE_v1.1.md`와 색인을 역대조해 설정서 직접 문장과 후속 구현 Hard Rule을 분리.
+  - FLR-010 원문 뉘앙스 복원, CBT-001 CANON/DESIGN 분리, 잘못된 절 출처 정정,
+    RAC-001 오크 주술사 수식어 복원 등.
+
+- **G-3 판단 근거 감사**
+  - 모든 CANON에 억지로 `판단`을 채우지 않고, 실제 해석이 개입한 항목만 기록하는 방침 유지.
+  - `HIS-003`: 설정서 §5.5의 Event Node 블록 전체가 DESIGN이므로 과도한 CANON 승격 제거.
+  - `CBT-007`: DESIGN → **CANON(방향) / TBD(수치)**.
+  - `CBT-013`: "부위 히트박스만 가능"이라는 구현 고정 완화. 랜덤 크리티컬 우회 금지는 유지.
+  - `CHR-011`: 상성만으로 승패를 확정하는 hard lock 금지로 문구 정밀화. 강한 유불리 자체는 TBD.
+  - `RAC-004`: **열린 목록은 CANON / 추가 종족 상세는 TBD**로 상태 정밀화.
+  - `FLR-011`: `clues[]` 필드와 자동 실패는 Canon을 강제하는 구현 Hard Rule임을 명시.
+
+- **G-4 내용 중복 감사** — 정본 1곳 + 참조 구조로 정리.
+  - `CBT-005 → ITM-003` (무기 수명)
+  - `CHR-006 → SKL-003` (스탯 3점 투자→스킬 후보)
+  - `FAC-004 → NPC-003` (시설 경험 정보 전파)
+  - `WLD-004 → CHR-012` (사망 시 보존/초기화 상세)
+  - `WLD-008 → ITM-002`, `WLD-009 → HIS-002/HIS-004`는 이전 감사에서 이미 통합.
+
+- **G-5 NPC LOD 결정성 감사**
+  - catch-up만으로는 SYS-003 결정성이 충분하지 않다고 판정.
+  - `D-014`/`NPC-005`에 RNG 스트림 독립, 승격 전 catch-up, 동시 사건 안정 순서,
+    논리 시각 이벤트 반영/예약, `last_sim_tick` 등 결정성 상태 저장, 저LOD 전용 확률표 금지 추가.
 
 ### Fixed
-- `Boot._ready()`에서 `change_scene_to_file()`을 직접 호출해 발생하던
-  "Parent node is busy adding/removing children" 런타임 에러 → 한 프레임 대기 후 전환하도록 수정.
+- `Boot._ready()`의 즉시 씬 전환으로 발생하던 `Parent node is busy adding/removing children` 오류를
+  한 프레임 대기 후 전환하도록 수정.
+- Canon 색인의 원문보다 강한 요약/과소·오인 출처와 내용 중복을 교정.
+- `CURRENT_STATE.md`와 월간 로그의 인계 상태 불일치를 동기화.
+- Markdown 파일 끝 LF 누락을 복구하고, 다음 작업에서도 유지하도록 로그에 규칙 기록.
 
 ### Notes
-- **PHASE 0 완료 (VERIFIED).** 완료 조건 전부 충족 — 실행/종료 정상, Git 커밋·push 존재.
-  ESC 종료는 오너가 직접 확인.
-- 개발 PC 이슈: AMD 드라이버 설치로 OpenGL 3.3 실GPU 확보. 단 네이티브 OpenGL 종료 시
-  `0xC0000409` 크래시가 있어(빈 프로젝트에서도 재현 — 엔진/드라이버 문제) 개발 실행은
-  `--rendering-driver opengl3_angle`로 우회. `project.godot`은 건드리지 않음.
-- 설정서 v1.1 원본(docx) 미입고 — `docs/canon/` 63항목과 `docs/CANON_NOTES.md`는 입고 후 대조 검수 필요.
-- 다음: `D-012` 오너 결정 → 원본 대조 검수 → PHASE 1 (이동/카메라) 지시 대기.
+- **PHASE 0 완료 (VERIFIED).** 실행/종료/Git push 확인, ESC 종료는 오너 직접 확인.
+- **G-1~G-5 모두 완료.** PHASE 1의 문서상 선행조건은 해소됐다.
+- PHASE 1은 **오너의 별도 착수 지시 전 시작하지 않는다.** 착수 시 `tests/runner.gd` + 이동/카메라 구현부터.
+- 개발 PC 네이티브 OpenGL 종료 크래시는 빈 프로젝트에서도 재현되는 환경 이슈다.
+  필요 시 로컬 실행에서 `--rendering-driver opengl3_angle` 사용하며 프로젝트 배포 설정에는 고정하지 않는다.
