@@ -1,0 +1,111 @@
+[gd_scene load_steps=6 format=3]
+
+; PHASE 1 임시 테스트 방. 벽 충돌과 카메라를 확인하기 위한 것이며 canon 지형이 아니다.
+; 1층 고정 지형(FLR-001)은 PHASE 2에서 data/floors/floor1_fixed/ 로 로드한다.
+; 여기서 TileMapLayer를 쓰지 않는 이유: PHASE 1 완료 조건은 "벽 안 뚫고 부드럽게 이동"뿐이고,
+; 타일셋 도입은 PHASE 2 지형 포맷 설계와 함께 가는 것이 맞다.
+; 32px 격자에 맞춰 배치했다 (Canon.TILE_SIZE).
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_h_wall"]
+size = Vector2(1024, 32)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_v_wall"]
+size = Vector2(32, 704)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_block_h"]
+size = Vector2(128, 32)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_block_v"]
+size = Vector2(32, 160)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_block_sq"]
+size = Vector2(96, 96)
+
+[node name="TestRoom" type="Node2D"]
+
+[node name="Floor" type="ColorRect" parent="."]
+offset_right = 960.0
+offset_bottom = 640.0
+color = Color(0.164706, 0.160784, 0.180392, 1)
+
+[node name="Walls" type="StaticBody2D" parent="."]
+
+[node name="Top" type="CollisionShape2D" parent="Walls"]
+position = Vector2(480, -16)
+shape = SubResource("RectangleShape2D_h_wall")
+
+[node name="Bottom" type="CollisionShape2D" parent="Walls"]
+position = Vector2(480, 656)
+shape = SubResource("RectangleShape2D_h_wall")
+
+[node name="Left" type="CollisionShape2D" parent="Walls"]
+position = Vector2(-16, 320)
+shape = SubResource("RectangleShape2D_v_wall")
+
+[node name="Right" type="CollisionShape2D" parent="Walls"]
+position = Vector2(976, 320)
+shape = SubResource("RectangleShape2D_v_wall")
+
+[node name="BlockH" type="CollisionShape2D" parent="Walls"]
+position = Vector2(288, 192)
+shape = SubResource("RectangleShape2D_block_h")
+
+[node name="BlockV" type="CollisionShape2D" parent="Walls"]
+position = Vector2(624, 400)
+shape = SubResource("RectangleShape2D_block_v")
+
+[node name="BlockSq" type="CollisionShape2D" parent="Walls"]
+position = Vector2(208, 496)
+shape = SubResource("RectangleShape2D_block_sq")
+
+[node name="WallVisuals" type="Node2D" parent="."]
+
+[node name="TopV" type="ColorRect" parent="WallVisuals"]
+offset_left = -32.0
+offset_top = -32.0
+offset_right = 992.0
+color = Color(0.317647, 0.309804, 0.34902, 1)
+
+[node name="BottomV" type="ColorRect" parent="WallVisuals"]
+offset_left = -32.0
+offset_top = 640.0
+offset_right = 992.0
+offset_bottom = 672.0
+color = Color(0.317647, 0.309804, 0.34902, 1)
+
+[node name="LeftV" type="ColorRect" parent="WallVisuals"]
+offset_left = -32.0
+offset_top = -32.0
+offset_bottom = 672.0
+color = Color(0.317647, 0.309804, 0.34902, 1)
+
+[node name="RightV" type="ColorRect" parent="WallVisuals"]
+offset_left = 960.0
+offset_top = -32.0
+offset_right = 992.0
+offset_bottom = 672.0
+color = Color(0.317647, 0.309804, 0.34902, 1)
+
+[node name="BlockHV" type="ColorRect" parent="WallVisuals"]
+offset_left = 224.0
+offset_top = 176.0
+offset_right = 352.0
+offset_bottom = 208.0
+color = Color(0.317647, 0.309804, 0.34902, 1)
+
+[node name="BlockVV" type="ColorRect" parent="WallVisuals"]
+offset_left = 608.0
+offset_top = 320.0
+offset_right = 640.0
+offset_bottom = 480.0
+color = Color(0.317647, 0.309804, 0.34902, 1)
+
+[node name="BlockSqV" type="ColorRect" parent="WallVisuals"]
+offset_left = 160.0
+offset_top = 448.0
+offset_right = 256.0
+offset_bottom = 544.0
+color = Color(0.317647, 0.309804, 0.34902, 1)
+
+[node name="SpawnPoint" type="Marker2D" parent="."]
+position = Vector2(480, 320)
