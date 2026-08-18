@@ -8,24 +8,28 @@
 
 ## 새 작업을 시작하는 에이전트/사람은 이 순서로 읽는다
 
+`COLLABORATION_PROTOCOL.md` §3.2의 순서를 따른다.
+
 1. **COLLABORATION_PROTOCOL.md** — 협업 규칙 (필수, 가장 먼저)
-2. **docs/SETTING_BIBLE** — 세계관 canon (v1.1)
-3. **DECISIONS.md** — 확정된 결정 이력
-4. **CURRENT_STATE.md** — 지금 어디까지 왔나
-5. **CHANGELOG.md** — 무엇이 바뀌었나
-6. 최근 **Git diff / 관련 코드** — 실제 상태
+2. **docs/log/YYYY-MM.md** — 이번 달 작업 로그. 직전 요청·근거·다음 AI 인계
+3. **docs/SETTING_BIBLE_v1.1.docx / docs/canon/INDEX.md** — 세계관 canon 원본과 검색용 색인
+4. **DECISIONS.md** — 확정된 결정 이력
+5. **CURRENT_STATE.md** — 지금 어디까지 왔나
+6. **CHANGELOG.md** — 무엇이 바뀌었나
+7. 최근 **Git diff / 관련 코드** — 실제 상태
 
 ## 문서 지도
 
 | 파일 | 역할 |
 | --- | --- |
 | `COLLABORATION_PROTOCOL.md` | 다중 에이전트 협업 규칙 (개발 가이드와 독립 관리) |
+| `docs/log/YYYY-MM.md` | 월별 요청·작업·근거·다음 AI 인계의 시계열 기록 |
 | `docs/DEVELOPMENT_GUIDE.md` | 통합 개발 가이드라인 v2.0 (구현 방식) |
 | `docs/SETTING_BIBLE_v1.1_README.md` | 세계관 canon 원본 배치 안내 |
 | **`docs/SETTING_BIBLE_v1.1.docx`** | **세계관 canon 원본 — 진실. 충돌 시 항상 이긴다** |
 | `docs/SETTING_BIBLE_v1.1.md` | 위의 자동 생성 사본 (canon 아님 · 직접 편집 금지) |
 | `tools/docx_to_md.ps1` | 사본 생성기 — docx 개정 시 재실행 |
-| **`docs/canon/INDEX.md`** | **Canon 전체 색인 (133항목/15도메인) — 찾을 때 여기부터** |
+| **`docs/canon/INDEX.md`** | **Canon 전체 색인 (141개 ID / 15도메인) — 찾을 때 여기부터** |
 | `docs/canon/README.md` | Canon 색인 체계의 정의 (ID 규칙·상태·작성법) |
 | `docs/CANON_NOTES.md` | (비움 — `docs/canon/`으로 통합) |
 | `docs/DATAMINING_POLICY.md` | 데이터 마이닝 대응 정책 (승인됨 — D-012) |
