@@ -18,7 +18,7 @@
 
 - 협업 프로토콜 v1.0 (`COLLABORATION_PROTOCOL.md`) — 역할/Canon 충돌/WORK REPORT/완료등급.
 - 통합 개발 가이드 v2.0 (`docs/DEVELOPMENT_GUIDE.md`) — PHASE 0~11 로드맵.
-- 결정 이력 (`DECISIONS.md`) — `D-001~D-018`, `D-018`은 회차 시작 고정 시스템 문구.
+- 결정 이력 (`DECISIONS.md`) — `D-001~D-020`.
 - 월 단위 작업 로그 `docs/log/` — 요청·작업·근거·다음 AI·오너 결정·산출물 기록.
 - **PHASE 0 — Godot 프로젝트 뼈대** 및 최소 Boot/Main 실행 구조.
 - 세계관 원본 `docs/SETTING_BIBLE_v1.1.docx` + AI 검수용 기계 변환 사본 `SETTING_BIBLE_v1.1.md`.
@@ -30,13 +30,17 @@
 - `D-015` — 자체 SceneTree 테스트 러너.
 - `D-017` — **실제 월드 공간 · 유배자 행동 반경 · 와이드 맵 · 홀짝층 · 지형 물질성/파괴 가능** 복원/확정.
 - **`D-018` / `SYS-015` — 회차 시작 시 `[@회차 시작! 행운을 빕니다!]` 고정 시스템 메시지.**
+- **`D-019` — P2-T2 1층 greybox PLAYTEST용 시작 범위 승인.**
+  긴 축 160~220 타일 / 주요 공간 14~20 / 소형 포켓 6~10 / 큰 루프 3~5.
+- **`D-020` — 1층 스폰 무기 품질을 소설 원문 규칙으로 복원.**
+  대체로 품질은 나쁘지만 초기 대거보다 낫다.
 - `FLR-023~027` — 실제 월드 일부인 층, 유배자별 맵의 끝, 공유 월드 물리 상태, NPC/야생동물 경계 통과,
   와이드 맵, 홀수층 개인 목표/짝수층 공동 목표, 파괴 가능한 물질 지형.
 - `FAC-012/013` — 계단은 층 진입 시 생성하고, 생성 후 월드 좌표에 고정되며 파괴 불가.
 - `docs/design/PHASE2_WORLD_SPACE_EXTENSION.md` — D-016 오너 확정과 GPT 구현 제안을 분리한 설계 토의 문서.
 - **`docs/design/PHASE2_IMPLEMENTATION_HANDOFF.md`** — D-016 최종 구현 인계. PHASE 2 P2-T0~T7 범위/완료조건.
 - **`docs/reference/FLOOR1_NOVEL_SOURCE_NOTES.md`** — 오너 제공 소설 초반 1층 원문을 PHASE 2 greybox 참고용으로 정리.
-  정확한 크기/방 수 수치는 원문에 없으며, 원문 단서와 DESIGN 가설을 분리해 기록.
+  정확한 크기/방 수 수치는 원문에 없으며, 원문 단서와 DESIGN 시작값을 분리해 기록.
 - **지질 데이터 계약**:
   - `data/worlds/README.md`
   - `data/worlds/geology_profile.schema.json`
@@ -56,7 +60,8 @@
   AccessEnvelope/목표/계단 귀속 같은 탑 규칙만 유배자별로 분리.
 - 맵의 끝은 유배자 본체뿐 아니라 **유배자가 원인이 된 직접 영향**도 차단:
   소환물/통제 펫, 투사체, 기술/마법 효과, 던진 물체, 유배자에 의해 강제 이동 중인 NPC/물체가 경계를 넘을 수 없다.
-- `FLR-014` — 고정 파밍 지점 `tier_hint`를 두지 않는 오너 결정 반영.
+- `FLR-014` — 고정 파밍 지점 `tier_hint`를 두지 않는 오너 결정 반영. 이후 `D-020`으로 무기 품질도 원문 복원:
+  **1층 스폰 무기는 대체로 저품질이지만 초기 대거보다 낫다.**
 - **D-016 PHASE 2 설계안 최종 확정 (`Resolved`)**:
   - 공간: `WorldTerrainDefinition/TerrainBody → FloorDefinition → FloorState + AccessEnvelope`.
   - 공유 물리 변화는 `WorldState.TerrainMutationState` 소유.
@@ -66,7 +71,7 @@
   - 생성 결과 저장 + seed + `floor_definition_version/hash`.
   - 지질 정의는 실제 데이터 파일로 보존하되 전체 행성 시뮬레이션은 PHASE 2 범위 밖.
 - **PHASE 2 진행 상태** — `P2-T1` 공간 데이터 타입 완료, `P2-T0` Canon 가드 및 AccessEnvelope 형태 기반 교체 완료.
-  다음은 1층 greybox(`P2-T2`)이며 소설/설정집에 정확한 크기·방 수 수치가 없어 오너 DESIGN 시작범위 확정 대기.
+  `D-019` 승인으로 **P2-T2 1층 greybox + loader는 바로 착수 가능**.
 
 - `docs/CANON_NOTES.md` 내용을 `docs/canon/`으로 통합하고 포인터만 유지.
 - B-004 자동 테스트 러너는 D-015로 종료.
@@ -85,6 +90,7 @@
 - integration runner를 harness와 케이스로 분리.
 - 카메라 짧은 왕복 이동 어지러움 → Camera2D drag margin 추가, 오너 PLAYTESTED.
 - Canon 색인의 원문보다 강한 요약/과소·오인 출처와 내용 중복 교정.
+- `FLR-014`의 **초기 대거 대비 1층 스폰 무기 품질**이 소설 원문과 충돌하던 문제를 `D-020`으로 해소.
 - README/CHANGELOG의 오래된 Canon 항목 수와 PHASE 상태 정리.
 
 ### Notes
@@ -92,7 +98,7 @@
 - **PHASE 0 완료 (VERIFIED).**
 - **G-1~G-5 완료.**
 - **PHASE 1 완료 (`PLAYTESTED`).**
-- **PHASE 2 진행 중.** `P2-T0/T1` 완료, `P2-T2` greybox 시작범위 오너 결정 대기.
-- 소설 초반 원문과 현재 `FLR-014` 사이에 **초기 대거 대비 1층 스폰 무기 품질 뉘앙스 충돌**이 발견됨. PHASE 3 전에 오너 결정 필요.
+- **PHASE 2 진행 중.** `P2-T0/T1` 완료, **`P2-T2` 착수 가능**.
+- P2-T2의 160~220 / 14~20 / 6~10 / 3~5는 **최종 Canon 숫자가 아니라 오너 승인 DESIGN 기준선**이며 P2-T7 PLAYTEST에서 조정 가능.
 - 1층 초기 지형은 고정이지만 플레이 중 지형 파괴는 `WorldState`의 공유 동적 mutation으로 허용된다.
 - 개발 PC 네이티브 OpenGL 종료 크래시는 환경 이슈. 필요 시 로컬에서 `--rendering-driver opengl3_angle` 사용.
