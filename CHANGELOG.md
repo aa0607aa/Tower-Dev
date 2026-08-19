@@ -18,7 +18,7 @@
 
 - 협업 프로토콜 v1.0 (`COLLABORATION_PROTOCOL.md`) — 역할/Canon 충돌/WORK REPORT/완료등급.
 - 통합 개발 가이드 v2.0 (`docs/DEVELOPMENT_GUIDE.md`) — PHASE 0~11 로드맵.
-- 결정 이력 (`DECISIONS.md`) — `D-001~D-020`.
+- 결정 이력 (`DECISIONS.md`) — `D-001~D-023`.
 - 월 단위 작업 로그 `docs/log/` — 요청·작업·근거·다음 AI·오너 결정·산출물 기록.
 - **PHASE 0 — Godot 프로젝트 뼈대** 및 최소 Boot/Main 실행 구조.
 - 세계관 원본 `docs/SETTING_BIBLE_v1.1.docx` + AI 검수용 기계 변환 사본 `SETTING_BIBLE_v1.1.md`.
@@ -34,6 +34,8 @@
   긴 축 160~220 타일 / 주요 공간 14~20 / 소형 포켓 6~10 / 큰 루프 3~5.
 - **`D-020` — 1층 스폰 무기 품질을 소설 원문 규칙으로 복원.**
   대체로 품질은 나쁘지만 초기 대거보다 낫다.
+- **`D-023` — 마인드맵 경로형 스탯 투자·랜덤 스킬 개화·제한적 환원 규칙 확정.**
+  빨강=STR / 초록=AGI / 파랑=INT, 노드 1개=스탯 +1, 가지 3노드 완성 시 즉시 랜덤 개화.
 - `FLR-023~027` — 실제 월드 일부인 층, 유배자별 맵의 끝, 공유 월드 물리 상태, NPC/야생동물 경계 통과,
   와이드 맵, 홀수층 개인 목표/짝수층 공동 목표, 파괴 가능한 물질 지형.
 - `FAC-012/013` — 계단은 층 진입 시 생성하고, 생성 후 월드 좌표에 고정되며 파괴 불가.
@@ -41,6 +43,8 @@
 - **`docs/design/PHASE2_IMPLEMENTATION_HANDOFF.md`** — D-016 최종 구현 인계. PHASE 2 P2-T0~T7 범위/완료조건.
 - **`docs/reference/FLOOR1_NOVEL_SOURCE_NOTES.md`** — 오너 제공 소설 초반 1층 원문을 PHASE 2 greybox 참고용으로 정리.
   정확한 크기/방 수 수치는 원문에 없으며, 원문 단서와 DESIGN 시작값을 분리해 기록.
+- **`docs/reference/EARLY_POE_PASSIVE_TREE_REFERENCE.md`** — 최신판이 아닌 **2011~2013 초기 Path of Exile** 패시브 트리의
+  road/highway·cluster·연결 노드 UX를 마인드맵 설계 참고로 정리. PoE 규칙 자체는 Canon 아님.
 - **지질 데이터 계약**:
   - `data/worlds/README.md`
   - `data/worlds/geology_profile.schema.json`
@@ -72,6 +76,13 @@
   - 지질 정의는 실제 데이터 파일로 보존하되 전체 행성 시뮬레이션은 PHASE 2 범위 밖.
 - **PHASE 2 진행 상태** — `P2-T1` 공간 데이터 타입 완료, `P2-T0` Canon 가드 및 AccessEnvelope 형태 기반 교체 완료.
   `D-019` 승인으로 **P2-T2 1층 greybox + loader는 바로 착수 가능**.
+- **`SKL-003/SKL-006` 정밀화 (`D-023`)**:
+  - 스탯 숫자 직접 배분 대신 연결된 색상 노드에 투자.
+  - 가지의 3노드 완성 즉시 스킬이 랜덤 개화.
+  - 설정서의 80/20은 내부 후보 풀/가중치로 사용.
+  - 중심에서 멀어질수록 기존 스탯/스킬과의 연관성 강화, 일정 깊이 이후 무관 스킬 배제.
+- **`RAC-003` 정정 (`D-023`)** — 종족 변경 시 전체 성장 초기화가 아니라
+  새 종족에 부적합한 스킬과 그 하위 가지만 취소하고 해당 구간의 투자 포인트를 환원. 임의 respec 금지.
 
 - `docs/CANON_NOTES.md` 내용을 `docs/canon/`으로 통합하고 포인터만 유지.
 - B-004 자동 테스트 러너는 D-015로 종료.
@@ -91,6 +102,7 @@
 - 카메라 짧은 왕복 이동 어지러움 → Camera2D drag margin 추가, 오너 PLAYTESTED.
 - Canon 색인의 원문보다 강한 요약/과소·오인 출처와 내용 중복 교정.
 - `FLR-014`의 **초기 대거 대비 1층 스폰 무기 품질**이 소설 원문과 충돌하던 문제를 `D-020`으로 해소.
+- `RAC-003`의 "종족 변경=전체 초기화"가 오너 의도보다 강했던 문제를 `D-023`으로 해소.
 - README/CHANGELOG의 오래된 Canon 항목 수와 PHASE 상태 정리.
 
 ### Notes
@@ -98,7 +110,8 @@
 - **PHASE 0 완료 (VERIFIED).**
 - **G-1~G-5 완료.**
 - **PHASE 1 완료 (`PLAYTESTED`).**
-- **PHASE 2 진행 중.** `P2-T0/T1` 완료, **`P2-T2` 착수 가능**.
+- **PHASE 2 진행 중.**
+- 마인드맵의 **전문화 임계 깊이·연관도 공식·태그 체계·새 가지 정확한 수/형태는 TBD**. `D-023`의 상위 구조만 확정.
 - P2-T2의 160~220 / 14~20 / 6~10 / 3~5는 **최종 Canon 숫자가 아니라 오너 승인 DESIGN 기준선**이며 P2-T7 PLAYTEST에서 조정 가능.
 - 1층 초기 지형은 고정이지만 플레이 중 지형 파괴는 `WorldState`의 공유 동적 mutation으로 허용된다.
 - 개발 PC 네이티브 OpenGL 종료 크래시는 환경 이슈. 필요 시 로컬에서 `--rendering-driver opengl3_angle` 사용.
