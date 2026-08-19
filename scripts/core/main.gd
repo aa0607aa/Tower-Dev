@@ -18,6 +18,7 @@ const RUN_SEED := 20260819
 var _floor_def: FloorDefinition
 var _floor_state: FloorState
 var _floor_view: FloorView
+var _debug_overlay: DebugOverlay
 
 
 func _ready() -> void:
@@ -58,7 +59,16 @@ func _ready() -> void:
 		_floor_def.spawn_points.size(), stair.key(),
 	])
 
-	_status_label.text = "「탑」 1층 (greybox) — 공간 %d · 긴 축 %d타일 · 함정 %d · 파밍 %d\nWASD/방향키: 이동   ESC: 종료" % [
+	# 개발용 오버레이 — 함정·파밍·계단 마커. 기본 꺼짐, F1로 토글.
+	# `SYS-005`(미발견 정보 누출 금지)를 정면으로 어기므로 배포 빌드에서는 켜지지 않는다.
+	# PHASE 3에서 실제 오브젝트가 생기면 역할이 끝난다.
+	_debug_overlay = DebugOverlay.new()
+	_debug_overlay.name = "DebugOverlay"
+	_debug_overlay.definition = _floor_def
+	_debug_overlay.state = _floor_state
+	add_child(_debug_overlay)
+
+	_status_label.text = "「탑」 1층 (greybox) — 공간 %d · 긴 축 %d타일 · 함정 %d · 파밍 %d\nWASD/방향키: 이동   F1: 함정·파밍·계단 표시   ESC: 종료" % [
 		_floor_def.spaces.size(), _floor_def.long_axis(),
 		_floor_def.traps.size(), _floor_def.loot_points.size(),
 	]
