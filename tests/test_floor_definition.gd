@@ -121,7 +121,11 @@ func _test_connectivity(t: TestCase, def: FloorDefinition) -> void:
 	for s in def.spaces:
 		var rect: Rect2i = s["rect"]
 		var center := rect.position + rect.size / 2
-		t.assert_true(reached.has(center), "공간 `%s` 중심에 도달할 수 있어야 한다" % s["id"])
+		# 중심이 아니라 **대표 칸**을 본다 — city/divisions는 중심이 구조물 안일 수 있다.
+		# 공간이 도달 가능한지가 요점이지 중심이 뚫려 있는지가 아니다.
+		var anchor := def.space_anchor_cell(s)
+		t.assert_true(reached.has(anchor),
+			"공간 `%s` 에 도달할 수 있어야 한다 (대표 칸 %v)" % [s["id"], anchor])
 
 
 func _test_start_point_is_walkable(t: TestCase, def: FloorDefinition) -> void:
@@ -151,9 +155,9 @@ func _test_start_point_is_walkable(t: TestCase, def: FloorDefinition) -> void:
 ## 내부 구조물(blocks)이 실제로 파였는가. 안 파이면 "큰 방 하나"로 남는다.
 func _test_blocks_are_carved(t: TestCase, def: FloorDefinition) -> void:
 	# grand_hall 안에 넣은 기둥 자리가 통행 불가여야 한다
-	t.assert_true(not def.is_walkable(Vector2i(77, 52)),
+	t.assert_true(not def.is_walkable(Vector2i(82, 44)),
 		"grand_hall 내부 기둥이 파여야 한다 (blocks)")
-	t.assert_true(not def.is_walkable(Vector2i(83, 58)),
+	t.assert_true(not def.is_walkable(Vector2i(98, 56)),
 		"grand_hall 중앙 구조물이 파여야 한다")
 	# 기둥 옆은 여전히 통행 가능해야 한다 — 방을 통째로 막으면 안 된다
-	t.assert_true(def.is_walkable(Vector2i(74, 52)), "기둥 옆은 통행 가능")
+	t.assert_true(def.is_walkable(Vector2i(92, 44)), "기둥 옆은 통행 가능")

@@ -132,18 +132,19 @@ func _generate_candidates(def: FloorDefinition, envelope: AccessEnvelope,
 		route: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for space in def.spaces:
-		var rect: Rect2i = space["rect"]
-		var center := rect.position + rect.size / 2
-		if not def.is_walkable(center) or not route.has(center):
+		# 기하학적 중심이 아니라 **통행 가능한 대표 칸**을 쓴다.
+		# `city`·`divisions` 구역은 중심이 구조물 안이라 공간째로 빠져버린다.
+		var cell := def.space_anchor_cell(space)
+		if not def.is_walkable(cell) or not route.has(cell):
 			continue
-		var anchor := WorldAnchor.new(def.world_id, def.world_region_ref, center, 0)
+		var anchor := WorldAnchor.new(def.world_id, def.world_region_ref, cell, 0)
 		if not envelope.contains(anchor):
 			continue
 		out.append({
 			"anchor": anchor,
 			"space_id": space["id"],
 			"kind": space["kind"],
-			"cost": int(route[center]),
+			"cost": int(route[cell]),
 			"score": 0.0,
 		})
 	return out

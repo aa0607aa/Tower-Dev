@@ -74,6 +74,41 @@ func sorted_walkable_cells() -> Array[Vector2i]:
 	return keys
 
 
+## 공간을 대표하는 **통행 가능한** 칸. 기하학적 중심이 아니다.
+##
+## 중심을 그대로 쓰면 `city`(큰 공간 안에 건물)나 `divisions`(벽으로 나뉜 셀) 구역에서
+## 중심이 구조물 안에 들어가 공간 전체가 후보에서 빠진다. 실제로 v2 레이아웃에서
+## `grand_hall`·`crypt_cells` 등 7개 공간이 그렇게 빠졌다.
+##
+## 중심에서 시작해 나선형으로 넓혀가며 처음 만나는 통행 가능한 칸을 쓴다.
+## 순회 순서가 고정이므로 결과도 결정적이다 (`SYS-003`).
+func space_anchor_cell(space: Dictionary) -> Vector2i:
+	var rect: Rect2i = space["rect"]
+	var center := rect.position + rect.size / 2
+	if is_walkable(center):
+		return center
+
+	var radius := 1
+	var limit := maxi(rect.size.x, rect.size.y)
+	while radius <= limit:
+		var best := Vector2i(-1, -1)
+		for dy in range(-radius, radius + 1):
+			for dx in range(-radius, radius + 1):
+				# 이미 본 안쪽 링은 건너뛴다
+				if absi(dx) != radius and absi(dy) != radius:
+					continue
+				var c := center + Vector2i(dx, dy)
+				if not rect.has_point(c) or not is_walkable(c):
+					continue
+				# 링 안에서도 순서를 고정한다 — y 우선, 그다음 x
+				if best.x < 0 or c.y < best.y or (c.y == best.y and c.x < best.x):
+					best = c
+		if best.x >= 0:
+			return best
+		radius += 1
+	return center
+
+
 func space_count(kind: String = "") -> int:
 	if kind.is_empty():
 		return spaces.size()
