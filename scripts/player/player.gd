@@ -27,14 +27,28 @@ const BASE_SPEED := 160.0
 
 @onready var _debug_label: Label = $DebugLabel
 
+## 이 유배자의 행동 반경 (`FLR-017` `FLR-024`). 없으면 경계 없이 움직인다.
+##
+## 지형 충돌과 **별개**다 — 지형은 물리 벽이고 이것은 탑의 인과 제약이다.
+## 경계 밖에도 실제 세계가 있고 NPC는 자유롭게 오간다 (`FLR-023`).
+var access_envelope: AccessEnvelope = null
+
 
 func _physics_process(_delta: float) -> void:
 	var raw := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	velocity = Movement.desired_velocity(raw, BASE_SPEED)
 
+	var before := global_position
+
 	# move_and_slide()는 velocity를 픽셀/초로 해석하고 delta를 내부에서 곱한다.
 	# 그래서 여기서 delta를 다시 곱하면 안 된다 — 곱하면 프레임률에 따라 속도가 흔들린다.
 	move_and_slide()
+
+	# 지형 충돌을 통과한 뒤 행동 반경으로 한 번 더 자른다.
+	# 순서가 중요하다 — 물리를 먼저 돌려야 벽 미끄러짐이 살아 있고,
+	# 그 결과를 경계로 자르면 두 제약이 모두 지켜진다.
+	if access_envelope != null:
+		global_position = AccessService.clamp_move(access_envelope, before, global_position)
 
 	if _debug_label:
 		_debug_label.text = "%d,%d" % [roundi(global_position.x), roundi(global_position.y)]

@@ -8,10 +8,15 @@ extends Node2D
 
 const CELL := 32  # Canon.TILE_SIZE
 
+## PHASE 2 임시 고정 시드. 회차 생성(`RunState`)이 붙으면 거기서 온다.
+## 지금 고정해두면 실행마다 같은 배치가 나와 greybox PLAYTEST 비교가 쉽다.
+const RUN_SEED := 20260819
+
 @onready var _status_label: Label = $UI/StatusLabel
 @onready var _player: CharacterBody2D = $Player
 
 var _floor_def: FloorDefinition
+var _floor_state: FloorState
 var _floor_view: FloorView
 
 
@@ -32,13 +37,30 @@ func _ready() -> void:
 		var start: Vector2i = _floor_def.start_points[0]
 		_player.global_position = Vector2(start.x * CELL + CELL / 2.0, start.y * CELL + CELL / 2.0)
 
+	# 행동 반경 (`FLR-017` `FLR-024`). 1층은 걸을 수 있는 곳 전부가 허용 영역이지만,
+	# 2층 이후에는 실제 월드가 더 넓고 그중 일부만 허용된다 (`FLR-023`).
+	# 지형과 별개 개념이므로 여기서 명시적으로 만들어 넘긴다.
+	_player.access_envelope = AccessService.envelope_from_floor(&"player", _floor_def)
+
+	# 층 진입 시 계단을 한 번 실체화한다 (`FAC-012`). 로드 때 다시 굴리지 않는다.
+	_floor_state = FloorPopulator.populate(_floor_def, RUN_SEED)
+	_floor_state.party_stairs.append(
+		StairResolver.new().resolve(_floor_def, _player.access_envelope, &"party_1", RUN_SEED))
+
+	var stair: WorldAnchor = _floor_state.party_stairs[0]["anchor"]
+
 	GameLog.info("Main", "1층 로드 — 공간 %d · 통행 %d칸 · 긴 축 %d타일 · 해시 %s" % [
 		_floor_def.spaces.size(), _floor_def.walkable_count(),
 		_floor_def.long_axis(), _floor_def.definition_hash.substr(0, 8),
 	])
+	GameLog.info("Main", "함정 %d · 파밍 %d · 스폰 %d · 계단 %s" % [
+		_floor_def.traps.size(), _floor_def.loot_points.size(),
+		_floor_def.spawn_points.size(), stair.key(),
+	])
 
-	_status_label.text = "「탑」 1층 (greybox) — 공간 %d · 긴 축 %d타일\nWASD/방향키: 이동   ESC: 종료" % [
+	_status_label.text = "「탑」 1층 (greybox) — 공간 %d · 긴 축 %d타일 · 함정 %d · 파밍 %d\nWASD/방향키: 이동   ESC: 종료" % [
 		_floor_def.spaces.size(), _floor_def.long_axis(),
+		_floor_def.traps.size(), _floor_def.loot_points.size(),
 	]
 
 

@@ -93,8 +93,33 @@ func _sorted_dict(d: Dictionary) -> Dictionary:
 	keys.sort_custom(func(a, b) -> bool: return String(a) < String(b))
 	var out := {}
 	for k in keys:
-		out[String(k)] = d[k]
+		out[String(k)] = _json_native(d[k])
 	return out
+
+
+## JSON에 없는 타입을 JSON 네이티브로 바꾼다.
+##
+## `StringName`은 JSON을 거치면 `String`이 되므로, 정규화하지 않으면
+## **저장→로드 왕복에서 같은 상태가 다르게 보인다.** 실제로 2-3 테스트가 그걸 잡았다.
+## 세이브 포맷은 JSON이므로 **직렬화 시점에** JSON이 표현할 수 있는 것만 남긴다.
+func _json_native(v: Variant) -> Variant:
+	match typeof(v):
+		TYPE_STRING_NAME:
+			return String(v)
+		TYPE_DICTIONARY:
+			var out := {}
+			var keys := (v as Dictionary).keys()
+			keys.sort_custom(func(a, b) -> bool: return String(a) < String(b))
+			for k in keys:
+				out[String(k)] = _json_native((v as Dictionary)[k])
+			return out
+		TYPE_ARRAY:
+			var arr: Array = []
+			for item in (v as Array):
+				arr.append(_json_native(item))
+			return arr
+		_:
+			return v
 
 
 func _sorted_cells(d: Dictionary) -> Array:
