@@ -121,31 +121,41 @@ Engine candidate
 
 BFS 실제 경로 비용을 사용하고, AI가 없어도 동작한다. 시작 위치는 `D-022`의 실제 `start_cell`을 사용한다.
 
-**GPT 독립 검토에서 수정 필요:**
+**GPT 독립 검토 지적 — 2026-08-19 처리 완료:**
 
-- **P2-REV-001 — AccessEnvelope-aware 경로 계산**
+- ✅ **P2-REV-001 — AccessEnvelope-aware 경로 계산** (`a385668`)
   - 현재 BFS는 `FloorDefinition`의 모든 walkable 셀을 탐색하고, 후보 지점만 envelope 안인지 확인한다.
   - 향후 구멍/부분 허용 영역에서는 **경계 밖으로 나갔다 다시 들어오는 경로**를 유효 경로로 오판할 수 있다.
   - hard constraint의 경로 탐색 자체가 AccessEnvelope를 존중해야 한다.
   - fallback 후보도 반드시 envelope 내부에서만 선택해야 한다.
   - 현재 1층은 envelope가 초기 walkable 전체라 증상이 드러나지 않는다.
+  - **처리**: BFS·fallback이 `envelope`을 받아 허용된 칸만 통과한다(`_passable()`).
+    차단 띠로 지형은 이어져 있지만 허용 영역 안에서는 끊긴 회귀 테스트 추가.
+  - **변이 검증**: envelope 검사를 제거하니 차단 띠 너머 **3645칸을 도달 가능으로 오판**하고
+    fallback이 좁은 허용 영역 밖 `(173,18)`에 계단을 놓았다. 가상의 문제가 아니었다.
 
-- **P2-REV-002 — 의미 없는 항상-참 테스트 제거**
+- ✅ **P2-REV-002 — 의미 없는 항상-참 테스트 제거** (`a385668`)
   - `tests/test_stair_resolver.gd`의 `p1.key() != p2.key() or true`는 항상 참이므로 아무것도 검증하지 않는다.
   - 같은 파티+시드 결정성은 유지하고, 서로 다른 party ID가 독립 stream에 참여함을 여러 seed에서 검증하거나 해당 assertion을 제거한다.
+  - **처리**: 시드 120개 표본에서 party_1/party_2 결과가 다른 건수가 1건 이상임을 단언.
+    한 시드에서 다르길 요구하지 않는다 — 우연히 같을 수 있다는 canon 유지.
 
 ### 4. 세이브/definition hash
 
 - 실체화 결과를 저장하며 로드시 seed로 다시 생성하지 않는다.
 - `FloorSave`는 `definition_hash`가 달라지면 `DEFINITION_CHANGED`를 반환한다.
 
-**GPT 독립 검토에서 정밀화 필요:**
+**GPT 독립 검토 지적 — 2026-08-19 처리 완료:**
 
-- **P2-REV-003 — definition_hash 계약 정리**
+- ✅ **P2-REV-003 — definition_hash 계약 정리** (`35d43b1`)
   - 로더 주석은 “기하만 해시”라고 설명하지만 실제 해시는 방/통로/blocks뿐 아니라 trap/loot/spawn 위치·일부 속성도 포함한다.
   - 반대로 trap `lethal`, `one_shot`, `clues` 등 저장된 회차의 의미를 바꿀 수 있는 고정 정의 일부는 포함하지 않는다.
   - 따라서 **정말 spatial compatibility hash인지, immutable floor-definition hash인지 계약을 하나로 정한 뒤** 필드를 맞춰야 한다.
   - 장기 세이브 계약이 굳기 전인 지금 정리하는 편이 싸다.
+  - **처리**: GPT 권고대로 **immutable floor-definition hash**를 택했다.
+    함정 `lethal`/`one_shot`/`clues`, 시작점 후보, 층 정체성(floor_id·테마·월드·scope·layout_version)을 반영.
+  - **변이 검증**: 함정 성질을 해시에서 빼니 3단언 실패.
+  - ⚠ 해시가 `b4b3bf46 → 61c43cdb`로 바뀌었다. 배포된 세이브가 없어 영향은 없다.
 
 ### 5. AccessEnvelope 향후 주의
 
@@ -157,23 +167,27 @@ BFS 실제 경로 비용을 사용하고, AI가 없어도 동작한다. 시작 �
 
 Claude 기록 기준 최신 layout v2에서:
 
-- 단위 **576 단언** 통과
+P2-REV 처리 후 (2026-08-19):
+
+- 단위 **652 단언** 통과 (576 → 652, 회귀 테스트 +76)
 - 통합 **20 단언** 통과
 - 반복 3회 안정성 확인
-- 이동 E2E는 변이(`velocity *= delta`) 주입 시 실패하는 것을 재확인
+- 변이 검증 3건 모두 실패 확인 — `velocity *= delta` / envelope 무시 / 함정 성질 해시 제외
 
 GPT는 이 세션에서 Godot 런타임을 직접 재실행한 것이 아니라 **GitHub 코드/테스트/로그 정합성을 독립 검토**했다.
 
 ## PHASE 3 전에 할 일
 
-1. **[Claude] P2-REV-001** — StairResolver BFS/fallback을 AccessEnvelope-aware로 수정하고 구멍/차단 영역 회귀 테스트 추가.
-2. **[Claude] P2-REV-002** — 항상 참인 party 계단 테스트를 제거/대체.
-3. **[Claude] P2-REV-003** — definition hash의 의미와 포함 필드 정리 + 관련 테스트 수정.
-4. **[Claude] 문서/주석 정리** — `scripts/core/main.gd` 상단의 "P2-T3~T6 아직 없음" 같은 오래된 설명을 최신 상태로 고친다.
-5. **[Claude] 권고** — layout 태그 `city`를 고대 사원에 맞는 의미 중립 이름으로 변경. 기하 자체는 유지 가능.
-6. **[Claude]** 위 수정 뒤 전체 단위/통합/변이 테스트 재실행하고 로그에 결과 기록.
-7. **[오너]** layout v2를 다시 플레이해 구역별 성격 차이/밀도/규모 체감을 판정.
-8. **[GPT]** 수정 diff를 빠르게 재검토. 이상 없고 오너 PLAYTEST가 통과하면 PHASE 2를 닫고 PHASE 3로 이동.
+1. ✅ **[Claude] P2-REV-001** — `a385668`. 변이 검증 완료.
+2. ✅ **[Claude] P2-REV-002** — `a385668`. 표본 기반 검증으로 교체.
+3. ✅ **[Claude] P2-REV-003** — `35d43b1`. immutable definition hash 채택, 변이 검증 완료.
+4. ✅ **[Claude] 문서/주석 정리** — `main.gd` 상단, `FloorPopulator`의 `D-022` 누락 보완.
+5. ✅ **[Claude] 태그 중립화** — `city` → `inner_complex`, `opencaves` → `collapsed_undercroft`.
+   기하는 그대로다. 남쪽 공동을 별도 생태가 아니라 **무너진 사원 하부**로 못박았다 (`FLR-013`).
+6. ✅ **[Claude]** 전체 재실행 — 단위 652 + 통합 20 통과, 변이 3건 검증.
+7. ⏳ **[오너]** layout v2 재플레이 — **"지형이 훨씬 낫다"** 판정 받음(2026-08-19).
+   밀도·규모 세부 판정은 아직 열려 있다.
+8. ⏳ **[GPT]** P2-REV 수정 diff 재검토. 이상 없으면 PHASE 2를 닫고 PHASE 3로 이동.
 
 ## 구현 주의 / 장기 인계
 

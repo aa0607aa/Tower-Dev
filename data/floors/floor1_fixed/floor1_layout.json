@@ -22,12 +22,16 @@
     "  입구 광장   open       — 장애물이 거의 없는 넓은 공간. 다른 구역과의 대비",
     "  서쪽 납골   divisions  — 좁은 통로로만 이어진 밀집 셀",
     "  북쪽 미로   corridors  — 뱀처럼 꺾이는 좁은 길. 좌우 번갈아 열림",
-    "  중앙 대청   city       — 큰 공간 안에 '건물'이 서 있고 그 사이가 길",
-    "  남쪽 공동   opencaves  — 사각형을 겹쳐 불규칙한 윤곽",
+    "  중앙 대청   inner_complex        — 큰 공간 안에 내부 구조물이 서 있고 그 사이가 길",
+    "  남쪽 공동   collapsed_undercroft — 무너진 사원 하부. 사각형을 겹쳐 불규칙한 윤곽",
     "  동쪽        passages   — 5칸 넓은 통로 위주, 방은 적다",
     "  최동단      open       — 거의 비어 있는 큰 홀. 마지막 대비",
     "",
-    "통로 폭도 1·2·3·5로 나누고 일부는 꺾이게 했다. 직선 3칸 통일이 단조로움의 절반이었다."
+    "통로 폭도 1·2·3·5로 나누고 일부는 꺾이게 했다. 직선 3칸 통일이 단조로움의 절반이었다.",
+    "",
+    "태그는 **세계관 중립어**를 쓴다 (GPT 검토 2026-08-19). DCSS의 city/opencaves를 그대로",
+    "쓰면 미래 AI·콘텐츠 시스템이 실제 '도시'나 '자연 동굴 바이옴'으로 오해한다.",
+    "여기는 하나의 고대 사원이며, 남쪽 공동은 별도 생태가 아니라 무너진 사원 하부다 (FLR-013)."
   ],
 
   "floor_id": "floor1",
@@ -48,13 +52,13 @@
     { "id": "sanctum",         "rect": [46, 42, 14, 12], "tags": ["rooms"] },
     { "id": "vault_row",       "rect": [38, 60, 30, 8],  "tags": ["rooms"] },
 
-    { "id": "grand_hall",      "rect": [76, 38, 38, 34], "tags": ["city", "landmark"] },
+    { "id": "grand_hall",      "rect": [76, 38, 38, 34], "tags": ["inner_complex", "landmark"] },
     { "id": "north_shrine",    "rect": [78, 8, 22, 18],  "tags": ["rooms"] },
     { "id": "shrine_annex",    "rect": [94, 20, 14, 10], "tags": ["rooms"] },
 
-    { "id": "cavern_a",        "rect": [38, 86, 24, 22], "tags": ["opencaves"] },
-    { "id": "cavern_b",        "rect": [56, 78, 22, 20], "tags": ["opencaves"] },
-    { "id": "cavern_c",        "rect": [72, 88, 26, 24], "tags": ["opencaves"] },
+    { "id": "cavern_a",        "rect": [38, 86, 24, 22], "tags": ["collapsed_undercroft"] },
+    { "id": "cavern_b",        "rect": [56, 78, 22, 20], "tags": ["collapsed_undercroft"] },
+    { "id": "cavern_c",        "rect": [72, 88, 26, 24], "tags": ["collapsed_undercroft"] },
 
     { "id": "east_gallery",    "rect": [114, 8, 28, 16], "tags": ["colonnade"] },
     { "id": "east_hub",        "rect": [116, 42, 20, 24], "tags": ["passages"] },
@@ -116,8 +120,8 @@
     "  colonnade → 열주 (좁고 규칙적)",
     "  divisions → 셀을 가르는 벽 (좁은 출입구만 남김)",
     "  corridors → 좌우 번갈아 열리는 뱀 모양 벽",
-    "  city      → 큰 공간 안의 '건물' 덩어리",
-    "  opencaves → 흩어진 바위 (불규칙)",
+    "  inner_complex → 큰 공간 안의 내부 구조물 덩어리",
+    "  collapsed_undercroft → 흩어진 잔해 (불규칙)",
     "  open      → 거의 비움 (대비)",
     "연결성 테스트가 고립을 잡으므로 과감히 넣어도 된다."
   ],

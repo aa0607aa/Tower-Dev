@@ -78,7 +78,7 @@ func sorted_walkable_cells() -> Array[Vector2i]:
 
 ## 공간을 대표하는 **통행 가능한** 칸. 기하학적 중심이 아니다.
 ##
-## 중심을 그대로 쓰면 `city`(큰 공간 안에 건물)나 `divisions`(벽으로 나뉜 셀) 구역에서
+## 중심을 그대로 쓰면 `inner_complex`(큰 공간 안에 구조물)나 `divisions`(벽으로 나뉜 셀) 구역에서
 ## 중심이 구조물 안에 들어가 공간 전체가 후보에서 빠진다. 실제로 v2 레이아웃에서
 ## `grand_hall`·`crypt_cells` 등 7개 공간이 그렇게 빠졌다.
 ##

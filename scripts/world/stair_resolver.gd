@@ -151,7 +151,7 @@ func _generate_candidates(def: FloorDefinition, envelope: AccessEnvelope,
 	var out: Array[Dictionary] = []
 	for space in def.spaces:
 		# 기하학적 중심이 아니라 **통행 가능한 대표 칸**을 쓴다.
-		# `city`·`divisions` 구역은 중심이 구조물 안이라 공간째로 빠져버린다.
+		# `inner_complex`·`divisions` 구역은 중심이 구조물 안이라 공간째로 빠져버린다.
 		var cell := def.space_anchor_cell(space)
 		if not def.is_walkable(cell) or not route.has(cell):
 			continue
