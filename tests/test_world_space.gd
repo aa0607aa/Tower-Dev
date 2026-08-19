@@ -14,6 +14,8 @@ func run(t: TestCase) -> void:
 	_test_anchor_identity(t)
 	_test_anchor_survives_terrain_change(t)
 	_test_envelope_is_per_exile(t)
+	_test_envelope_scales_to_wide_map(t)
+	_test_envelope_irregular_shape(t)
 	_test_terrain_is_shared(t)
 	_test_causal_boundary(t)
 	_test_mutation_order_is_deterministic(t)
@@ -66,6 +68,58 @@ func _test_envelope_is_per_exile(t: TestCase) -> void:
 
 	# 경계 밖
 	t.assert_true(not env_a.contains(_anchor(20, 20)), "영역 밖은 제외")
+
+
+## FLR-025 와이드 맵 — 허용 영역이 커도 메모리가 셀 수에 비례하면 안 된다.
+##
+## 초기 구현은 허용 셀을 전부 Dictionary에 넣어서 1000×1000이면 100만 엔트리였다.
+## 이 테스트는 **형태 수**로 저장되는지를 확인한다. 통과 못 하면 와이드 맵에서 메모리가 터진다.
+func _test_envelope_scales_to_wide_map(t: TestCase) -> void:
+	var env := AccessEnvelope.new(EXILE_A, WORLD, REGION)
+	env.allow_rect(Rect2i(0, 0, 2000, 2000))  # 400만 셀
+
+	t.assert_eq(env.region_count(), 1,
+		"넓은 영역이 형태 1개로 저장돼야 한다 (셀을 나열하면 안 된다)")
+	t.assert_eq(env.exception_count(), 0, "예외 셀이 없어야 한다")
+
+	# 그래도 판정은 정확해야 한다
+	t.assert_true(env.contains(_anchor(0, 0)), "좌상단 포함")
+	t.assert_true(env.contains(_anchor(1999, 1999)), "우하단 포함")
+	t.assert_true(env.contains(_anchor(1234, 567)), "내부 임의 지점 포함")
+	t.assert_true(not env.contains(_anchor(2000, 0)), "우측 경계 밖 제외")
+	t.assert_true(not env.contains(_anchor(-1, 0)), "좌측 경계 밖 제외")
+
+	# bounding_rect는 broad-phase용이며 canon 경계가 아니다 (D-016 §1.5)
+	t.assert_eq(env.bounding_rect(), Rect2i(0, 0, 2000, 2000), "AABB가 형태를 감싸야 한다")
+
+
+## 불규칙한 형태 — 사각형 여러 개 + 구멍 + 돌출.
+## 와이드 맵이 단순 사각형일 리 없으므로 이게 되어야 실전에서 쓸 수 있다.
+func _test_envelope_irregular_shape(t: TestCase) -> void:
+	var env := AccessEnvelope.new(EXILE_A, WORLD, REGION)
+	env.allow_rect(Rect2i(0, 0, 10, 10))
+	env.allow_rect(Rect2i(20, 0, 10, 10))   # 떨어진 두 번째 영역
+	env.deny_cell(Vector2i(5, 5))            # 첫 영역 안의 구멍
+	env.allow_cell(Vector2i(100, 100))       # 어느 사각형에도 없는 숨은 공간
+
+	t.assert_eq(env.region_count(), 2, "사각형 2개")
+
+	t.assert_true(env.contains(_anchor(1, 1)), "첫 영역 포함")
+	t.assert_true(env.contains(_anchor(25, 5)), "둘째 영역 포함")
+	t.assert_true(not env.contains(_anchor(15, 5)), "두 영역 사이는 제외")
+
+	# 구멍이 사각형보다 우선해야 한다
+	t.assert_true(not env.contains(_anchor(5, 5)), "구멍은 제외돼야 한다 (deny가 우선)")
+	t.assert_true(env.contains(_anchor(5, 6)), "구멍 옆은 여전히 포함")
+
+	# FAC-012: 계단이 정상 바닥이 아닌 숨은 공간에도 놓일 수 있으므로 돌출이 필요하다
+	t.assert_true(env.contains(_anchor(100, 100)), "사각형 밖 개별 허용 셀 포함")
+
+	# 레이어 — 천장 위/지하
+	env.allow_layers(-1, 2)
+	t.assert_true(env.contains(_anchor(1, 1, 2)), "허용 레이어 안")
+	t.assert_true(env.contains(_anchor(1, 1, -1)), "지하 레이어 안")
+	t.assert_true(not env.contains(_anchor(1, 1, 3)), "허용 레이어 밖 제외")
 
 
 ## ★ P2-T1 핵심 — 물리 상태는 월드가 소유하고 유배자별로 복제되지 않는다.
