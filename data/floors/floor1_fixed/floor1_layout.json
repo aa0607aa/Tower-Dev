@@ -1,0 +1,88 @@
+{
+  "_comment": [
+    "1층 고정 초기 지형 (FLR-001). 이 파일이 저작 SSOT다.",
+    "랜덤 요소가 없다 — 시드와 무관하게 항상 같은 지형이 나온다 (TEST_CHECKLIST 2-1).",
+    "로더가 방/통로 사각형을 결정적으로 전개해 FloorDefinition을 만든다.",
+    "생성기가 아니다: 입력이 같으면 출력이 같고, 시드를 받지 않는다 (FLR-003).",
+    "",
+    "규모는 D-019의 PLAYTEST용 DESIGN 기준선이다. Canon 숫자가 아니며 P2-T7에서 조정한다.",
+    "  긴 축 160~220 / 주요 공간 14~20 / 소형 포켓 6~10 / 큰 루프 3~5",
+    "",
+    "함정·파밍·스폰 지점은 P2-T3에서 추가한다. 이 파일에는 지형만 있다.",
+    "테마는 고대 사원풍 잿빛 돌 (FLR-013)."
+  ],
+
+  "floor_id": "floor1",
+  "theme_id": "ancient_temple",
+  "world_id": "world_tutorial",
+  "world_region_ref": "temple_plateau",
+  "geology_region_ref": null,
+  "objective_scope": "INDIVIDUAL",
+  "layout_version": 1,
+
+  "rooms": [
+    { "id": "entry_hall",        "rect": [8, 50, 22, 18], "tags": ["start"] },
+    { "id": "west_gallery",      "rect": [8, 14, 18, 20], "tags": [] },
+    { "id": "west_crypt",        "rect": [8, 88, 20, 22], "tags": [] },
+    { "id": "north_hall",        "rect": [38, 10, 26, 16], "tags": [] },
+    { "id": "mid_west_chamber",  "rect": [38, 46, 20, 24], "tags": [] },
+    { "id": "south_west_vault",  "rect": [36, 92, 24, 18], "tags": [] },
+    { "id": "inner_sanctum",     "rect": [62, 26, 14, 10], "tags": [] },
+    { "id": "grand_hall",        "rect": [70, 44, 34, 28], "tags": ["landmark"] },
+    { "id": "north_shrine",      "rect": [80, 8, 22, 14], "tags": [] },
+    { "id": "south_cistern",     "rect": [72, 86, 26, 22], "tags": [] },
+    { "id": "east_gallery",      "rect": [114, 12, 22, 22], "tags": [] },
+    { "id": "east_chamber",      "rect": [112, 46, 20, 22], "tags": [] },
+    { "id": "east_crypt",        "rect": [112, 88, 22, 20], "tags": [] },
+    { "id": "far_north_cell",    "rect": [148, 14, 18, 16], "tags": [] },
+    { "id": "far_east_hall",     "rect": [146, 48, 24, 26], "tags": [] },
+    { "id": "far_south_cell",    "rect": [148, 90, 18, 18], "tags": [] }
+  ],
+
+  "pockets": [
+    { "id": "pocket_nw",  "rect": [30, 20, 6, 6] },
+    { "id": "pocket_w",   "rect": [30, 74, 6, 8] },
+    { "id": "pocket_mid", "rect": [64, 76, 6, 6] },
+    { "id": "pocket_ne",  "rect": [104, 26, 6, 6] },
+    { "id": "pocket_se",  "rect": [104, 76, 6, 6] },
+    { "id": "pocket_e",   "rect": [138, 32, 6, 8] },
+    { "id": "pocket_es",  "rect": [138, 78, 6, 6] },
+    { "id": "pocket_far", "rect": [172, 58, 6, 6] }
+  ],
+
+  "corridors": [
+    { "id": "c_entry_west",   "width": 3, "segments": [[15, 34, 15, 50]] },
+    { "id": "c_entry_crypt",  "width": 3, "segments": [[16, 68, 16, 88]] },
+    { "id": "c_entry_mid",    "width": 3, "segments": [[30, 57, 38, 57]] },
+    { "id": "c_west_north",   "width": 3, "segments": [[26, 20, 38, 20]] },
+    { "id": "c_north_shrine", "width": 3, "segments": [[64, 16, 80, 16]] },
+    { "id": "c_north_inner",  "width": 3, "segments": [[56, 26, 56, 31], [56, 31, 62, 31]] },
+    { "id": "c_inner_grand",  "width": 3, "segments": [[69, 31, 69, 44]] },
+    { "id": "c_shrine_grand", "width": 3, "segments": [[90, 22, 90, 44]] },
+    { "id": "c_mid_grand",    "width": 3, "segments": [[58, 58, 70, 58]] },
+    { "id": "c_grand_east",   "width": 3, "segments": [[104, 57, 112, 57]] },
+    { "id": "c_grand_south",  "width": 3, "segments": [[86, 72, 86, 86]] },
+    { "id": "c_midw_swv",     "width": 3, "segments": [[47, 70, 47, 92]] },
+    { "id": "c_crypt_swv",    "width": 3, "segments": [[28, 98, 36, 98]] },
+    { "id": "c_swv_cistern",  "width": 3, "segments": [[60, 99, 72, 99]] },
+    { "id": "c_east_gal",     "width": 3, "segments": [[122, 34, 122, 46]] },
+    { "id": "c_east_crypt",   "width": 3, "segments": [[121, 68, 121, 88]] },
+    { "id": "c_cistern_ecr",  "width": 3, "segments": [[98, 98, 112, 98]] },
+    { "id": "c_gal_farn",     "width": 3, "segments": [[136, 22, 148, 22]] },
+    { "id": "c_east_fareast", "width": 3, "segments": [[132, 57, 146, 57]] },
+    { "id": "c_ecr_fars",     "width": 3, "segments": [[134, 98, 148, 98]] },
+    { "id": "c_farn_fareast", "width": 3, "segments": [[157, 30, 157, 48]] },
+    { "id": "c_fareast_fars", "width": 3, "segments": [[157, 74, 157, 90]] },
+
+    { "id": "p_nw",   "width": 2, "segments": [[26, 23, 30, 23]] },
+    { "id": "p_w",    "width": 2, "segments": [[35, 78, 47, 78]] },
+    { "id": "p_mid",  "width": 2, "segments": [[67, 79, 71, 79], [71, 79, 71, 71]] },
+    { "id": "p_ne",   "width": 2, "segments": [[109, 29, 114, 29]] },
+    { "id": "p_se",   "width": 2, "segments": [[109, 79, 120, 79]] },
+    { "id": "p_e",    "width": 2, "segments": [[141, 22, 141, 32]] },
+    { "id": "p_es",   "width": 2, "segments": [[143, 81, 156, 81]] },
+    { "id": "p_far",  "width": 2, "segments": [[170, 61, 172, 61]] }
+  ],
+
+  "start_points": [[18, 58]]
+}
