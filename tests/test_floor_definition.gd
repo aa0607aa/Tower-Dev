@@ -15,6 +15,7 @@ func run(t: TestCase) -> void:
 	_test_scale_matches_d019(t, def)
 	_test_seed_independence(t, def)
 	_test_hash_ignores_formatting(t)
+	_test_hash_covers_immutable_definition(t)
 	_test_connectivity(t, def)
 	_test_start_point_is_walkable(t, def)
 	_test_blocks_are_carved(t, def)
@@ -63,7 +64,7 @@ func _test_seed_independence(t: TestCase, def: FloorDefinition) -> void:
 			"시드 %d 에서도 통행 셀 수가 같아야 한다" % i)
 
 
-## 해시는 기하만 반영해야 한다.
+## 해시는 **불변 정의**를 반영하고 서술 포맷은 반영하지 않아야 한다 (`P2-REV-003`).
 ## 포맷 정리·주석 추가만으로 해시가 바뀌면 옛 세이브가 "정의 변경"으로 거부당한다 (P2-T6).
 func _test_hash_ignores_formatting(t: TestCase) -> void:
 	var base := {
@@ -91,6 +92,47 @@ func _test_hash_ignores_formatting(t: TestCase) -> void:
 	t.assert_true(FloorDefinitionLoader.build(moved).definition_hash
 			!= FloorDefinitionLoader.build(base).definition_hash,
 		"기하가 바뀌면 해시가 달라져야 한다")
+
+
+## `P2-REV-003` — 저장된 회차의 **의미**를 바꾸는 고정 정의는 전부 해시에 들어가야 한다.
+##
+## 전에는 설명이 "기하만 반영"인데 실제로는 함정 위치·종류까지 넣으면서
+## `lethal`·`one_shot`·`clues`는 빠뜨렸다. 치명 여부나 단서가 바뀌면
+## **같은 세이브가 다른 게임이 된다** — 호환 판정이 그걸 놓치면 안 된다.
+func _test_hash_covers_immutable_definition(t: TestCase) -> void:
+	var base := {
+		"floor_id": "t", "theme_id": "t", "world_id": "w", "world_region_ref": "r",
+		"layout_version": 1, "objective_scope": "INDIVIDUAL",
+		"rooms": [{"id": "a", "rect": [0, 0, 6, 6], "tags": []}],
+		"start_points": [[1, 1]],
+		"traps": [{"id": "tr", "cell": [2, 2], "type": "pitfall",
+			"lethal": true, "one_shot": false, "clues": ["갈라진 바닥"]}],
+		"loot_points": [{"id": "lp", "cell": [3, 3]}],
+		"spawn_points": [{"id": "sp", "cell": [4, 4]}],
+	}
+	var base_hash: String = FloorDefinitionLoader.build(base).definition_hash
+
+	# 각각 하나씩만 바꿔서 해시가 실제로 달라지는지 본다.
+	var mutations := {
+		"함정 치명 여부": func(d: Dictionary) -> void: d["traps"][0]["lethal"] = false,
+		"함정 일회성": func(d: Dictionary) -> void: d["traps"][0]["one_shot"] = true,
+		"함정 사전 단서": func(d: Dictionary) -> void: d["traps"][0]["clues"] = ["다른 단서"],
+		"함정 종류": func(d: Dictionary) -> void: d["traps"][0]["type"] = "wall_bolt",
+		"시작점 후보": func(d: Dictionary) -> void: d["start_points"] = [[1, 1], [2, 1]],
+		"층 정체성(floor_id)": func(d: Dictionary) -> void: d["floor_id"] = "other",
+		"레이아웃 버전": func(d: Dictionary) -> void: d["layout_version"] = 2,
+		"목표 범위": func(d: Dictionary) -> void: d["objective_scope"] = "SHARED",
+		"파밍 지점 위치": func(d: Dictionary) -> void: d["loot_points"][0]["cell"] = [5, 3],
+	}
+	for label in mutations:
+		var changed: Dictionary = base.duplicate(true)
+		(mutations[label] as Callable).call(changed)
+		t.assert_true(FloorDefinitionLoader.build(changed).definition_hash != base_hash,
+			"%s 가 바뀌면 해시가 달라져야 한다 (P2-REV-003)" % label)
+
+	# 같은 정의를 다시 만들면 같아야 한다 — 위 비교가 우연이 아님을 보인다.
+	t.assert_eq(FloorDefinitionLoader.build(base.duplicate(true)).definition_hash, base_hash,
+		"같은 정의는 항상 같은 해시여야 한다")
 
 
 ## 지형이 하나로 이어져 있는가.

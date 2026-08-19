@@ -47,9 +47,24 @@ static func build(src: Dictionary) -> FloorDefinition:
 	def.objective_scope = FloorDefinition.ObjectiveScope.SHARED if scope == "SHARED" \
 		else FloorDefinition.ObjectiveScope.INDIVIDUAL
 
-	# 해시는 **기하만** 반영한다. 주석·들여쓰기·키 순서가 바뀌어도 지형이 같으면 같은 해시여야
-	# 한다 — 그러지 않으면 포맷 정리만 해도 옛 세이브가 "정의가 바뀌었다"고 거부당한다.
+	# ## 해시 계약 — **불변 정의 해시** (`P2-REV-003`)
+	#
+	# 저장된 회차의 의미에 영향을 주는 **고정 정의 전부**를 반영한다.
+	# 주석·들여쓰기·키 순서가 바뀌어도 정의가 같으면 같은 해시다 — 그러지 않으면
+	# 포맷 정리만 해도 옛 세이브가 "정의가 바뀌었다"고 거부당한다.
+	#
+	# 전에는 "기하만 반영"이라고 적어놓고 실제로는 함정 위치·종류까지 넣으면서
+	# `lethal`·`one_shot`·`clues`는 빠뜨렸다. 설명과 구현이 어긋나 있었다.
+	# 치명 여부나 단서가 바뀌면 **같은 세이브가 다른 게임이 된다** — 반영해야 한다.
+	#
+	# `FloorSave`가 이 값을 옛 세이브와의 호환 판정 계약으로 쓴다.
+	# 여기 넣지 않은 것은 "바뀌어도 옛 세이브를 그대로 이어도 된다"는 선언이다.
 	var hash_parts: Array[String] = []
+
+	# 층의 정체성. floor_id나 월드가 바뀌면 같은 좌표라도 다른 층이다.
+	hash_parts.append("meta|%s|%s|%s|%s|%s|%s|%d" % [
+		def.floor_id, def.theme_id, def.world_id, def.world_region_ref,
+		def.geology_region_ref, scope, def.layout_version])
 
 	for kind in ["rooms", "pockets"]:
 		for entry in src.get(kind, []):
@@ -80,8 +95,11 @@ static func build(src: Dictionary) -> FloorDefinition:
 		hash_parts.append("block|%s|%d,%d,%d,%d" % [
 			blk.get("id", ""), rect.position.x, rect.position.y, rect.size.x, rect.size.y])
 
+	# 시작점 후보 (`D-022`). 후보 집합이 바뀌면 회차의 시작 위치가 달라지므로 해시에 넣는다.
 	for p in src.get("start_points", []):
-		def.start_points.append(Vector2i(int(p[0]), int(p[1])))
+		var scell := Vector2i(int(p[0]), int(p[1]))
+		def.start_points.append(scell)
+		hash_parts.append("start|%d,%d" % [scell.x, scell.y])
 
 	# 함정 — 위치·종류·구조·단서 전부 고정. 상태(armed/fired)는 FloorState 소관이다.
 	for tr in src.get("traps", []):
@@ -97,7 +115,12 @@ static func build(src: Dictionary) -> FloorDefinition:
 			"one_shot": bool(tr.get("one_shot", false)),
 			"clues": clues,
 		})
-		hash_parts.append("trap|%s|%d,%d|%s" % [tr["id"], cell.x, cell.y, tr["type"]])
+		# 치명 여부·일회성·단서까지 넣는다 — 위치가 같아도 이것들이 바뀌면 다른 함정이다.
+		hash_parts.append("trap|%s|%d,%d|%s|%s|%s|%s" % [
+			tr["id"], cell.x, cell.y, tr["type"],
+			"L" if bool(tr.get("lethal", false)) else "-",
+			"O" if bool(tr.get("one_shot", false)) else "-",
+			"/".join(clues)])
 
 	for lp in src.get("loot_points", []):
 		var lc := Vector2i(int(lp["cell"][0]), int(lp["cell"][1]))

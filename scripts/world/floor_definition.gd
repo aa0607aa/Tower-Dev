@@ -52,7 +52,9 @@ var traps: Array[Dictionary] = []
 var loot_points: Array[Dictionary] = []
 var spawn_points: Array[Dictionary] = []
 
-## 저작 기하의 구조 해시. 포맷·주석·들여쓰기가 아니라 **기하만** 반영한다.
+## **불변 정의 해시** (`P2-REV-003`). 포맷·주석·들여쓰기·키 순서는 반영하지 않고,
+## 저장된 회차의 의미에 영향을 주는 고정 정의(지형·함정 성질·지점·층 정체성)를 전부 반영한다.
+## `FloorSave`가 옛 세이브와의 호환 판정 계약으로 쓴다.
 var definition_hash: String = ""
 
 
