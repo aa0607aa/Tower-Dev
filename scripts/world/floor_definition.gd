@@ -41,6 +41,17 @@ var _walkable: Dictionary = {}
 var bounds: Rect2i = Rect2i()
 var start_points: Array[Vector2i] = []
 
+## 함정의 **고정** 정의 (`FLR-001` · `D-012` 2026-08-18 정정).
+## 위치·종류·구조·사전 단서까지 전부 고정이다. `armed`/`fired` 같은 상태는 `FloorState`에 있다.
+## { id, cell, type, lethal, one_shot, clues[] }
+var traps: Array[Dictionary] = []
+
+## 파밍/스폰 **지점**. 좌표만 고정이고 내용물은 시드가 정한다 (`FLR-002`).
+## 여기에 `tier_hint` 같은 등급 힌트를 두지 않는다 (`D-016`).
+## { id, cell }
+var loot_points: Array[Dictionary] = []
+var spawn_points: Array[Dictionary] = []
+
 ## 저작 기하의 구조 해시. 포맷·주석·들여쓰기가 아니라 **기하만** 반영한다.
 var definition_hash: String = ""
 

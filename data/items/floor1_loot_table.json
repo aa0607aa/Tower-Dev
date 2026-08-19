@@ -1,0 +1,38 @@
+{
+  "_comment": [
+    "1층 파밍 가능성 공간. **어느 지점에 무엇이 나오는지는 여기 없다** (SYS-009 Tier 1).",
+    "지점→내용물 매핑은 시드로 실체화되어 세이브에만 존재한다.",
+    "",
+    "D-020 / FLR-014: 1층 스폰 무기는 대체로 품질이 나쁘지만 **초기 대거보다는 낫다.**",
+    "  → 무기의 combat_value 하한을 초기 대거(dagger_starting)보다 높게 둔다.",
+    "  → 품질이 나쁘다는 것은 내구·부가 성능이 낮다는 뜻이지 대거보다 약하다는 뜻이 아니다.",
+    "FLR-014: 투사무기 상한은 석궁 수준. 총기는 극저확률.",
+    "",
+    "weight는 상대 등장 가중치다. 실제 수치 밸런스는 PHASE 6 이후 튜닝 대상(DESIGN)."
+  ],
+
+  "reference_starting_weapon": {
+    "id": "dagger_starting",
+    "combat_value": 10,
+    "_note": "전 유배자 공통 초기 장비 (FLR-007 / D-011). 비교 기준이며 파밍 풀에 없다."
+  },
+
+  "entries": [
+    { "id": "shortsword_worn",   "kind": "weapon",     "combat_value": 13, "durability": "poor",   "weight": 90 },
+    { "id": "handaxe_chipped",   "kind": "weapon",     "combat_value": 12, "durability": "poor",   "weight": 90 },
+    { "id": "spear_cracked",     "kind": "weapon",     "combat_value": 14, "durability": "poor",   "weight": 70 },
+    { "id": "mace_rusted",       "kind": "weapon",     "combat_value": 12, "durability": "poor",   "weight": 70 },
+    { "id": "shortsword_sound",  "kind": "weapon",     "combat_value": 16, "durability": "fair",   "weight": 35 },
+    { "id": "spear_sound",       "kind": "weapon",     "combat_value": 17, "durability": "fair",   "weight": 25 },
+    { "id": "sling_crude",       "kind": "ranged",     "combat_value": 11, "durability": "poor",   "weight": 45 },
+    { "id": "shortbow_warped",   "kind": "ranged",     "combat_value": 13, "durability": "poor",   "weight": 30 },
+    { "id": "crossbow_light",    "kind": "ranged",     "combat_value": 18, "durability": "fair",   "weight": 8 },
+    { "id": "shield_splintered", "kind": "armor",      "combat_value": 0,  "durability": "poor",   "weight": 55 },
+    { "id": "jerkin_torn",       "kind": "armor",      "combat_value": 0,  "durability": "poor",   "weight": 55 },
+    { "id": "rope_frayed",       "kind": "utility",    "combat_value": 0,  "durability": "poor",   "weight": 60 },
+    { "id": "waterskin",         "kind": "utility",    "combat_value": 0,  "durability": "fair",   "weight": 50 },
+    { "id": "torch_stub",        "kind": "utility",    "combat_value": 0,  "durability": "poor",   "weight": 60 },
+    { "id": "rations_stale",     "kind": "consumable", "combat_value": 0,  "durability": "poor",   "weight": 70 },
+    { "id": "bandage_soiled",    "kind": "consumable", "combat_value": 0,  "durability": "poor",   "weight": 50 }
+  ]
+}

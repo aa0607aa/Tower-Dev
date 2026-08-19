@@ -72,6 +72,32 @@ static func build(src: Dictionary) -> FloorDefinition:
 	for p in src.get("start_points", []):
 		def.start_points.append(Vector2i(int(p[0]), int(p[1])))
 
+	# 함정 — 위치·종류·구조·단서 전부 고정. 상태(armed/fired)는 FloorState 소관이다.
+	for tr in src.get("traps", []):
+		var cell := Vector2i(int(tr["cell"][0]), int(tr["cell"][1]))
+		var clues: Array[String] = []
+		for c in tr.get("clues", []):
+			clues.append(String(c))
+		def.traps.append({
+			"id": StringName(tr["id"]),
+			"cell": cell,
+			"type": StringName(tr["type"]),
+			"lethal": bool(tr.get("lethal", false)),
+			"one_shot": bool(tr.get("one_shot", false)),
+			"clues": clues,
+		})
+		hash_parts.append("trap|%s|%d,%d|%s" % [tr["id"], cell.x, cell.y, tr["type"]])
+
+	for lp in src.get("loot_points", []):
+		var lc := Vector2i(int(lp["cell"][0]), int(lp["cell"][1]))
+		def.loot_points.append({"id": StringName(lp["id"]), "cell": lc})
+		hash_parts.append("loot|%s|%d,%d" % [lp["id"], lc.x, lc.y])
+
+	for sp in src.get("spawn_points", []):
+		var sc := Vector2i(int(sp["cell"][0]), int(sp["cell"][1]))
+		def.spawn_points.append({"id": StringName(sp["id"]), "cell": sc})
+		hash_parts.append("spawn|%s|%d,%d" % [sp["id"], sc.x, sc.y])
+
 	# 순서에 의존하지 않는 해시 (SYS-003)
 	hash_parts.sort()
 	def._finalize(_compute_bounds(def), (" ".join(hash_parts)).sha256_text())

@@ -84,5 +84,73 @@
     { "id": "p_far",  "width": 2, "segments": [[170, 61, 172, 61]] }
   ],
 
-  "start_points": [[18, 58]]
+  "start_points": [[18, 58]],
+
+  "_traps_comment": [
+    "함정의 위치·종류·구조·사전 단서는 모두 고정이다 (FLR-001, D-012 2026-08-18 정정).",
+    "동적인 것은 armed/fired 같은 상태뿐이며 FloorState가 가진다.",
+    "치명 함정은 clues가 비면 테스트가 실패한다 (FLR-011).",
+    "발사형(one_shot)은 한 번 소모되면 재충전되지 않는다 (FLR-012)."
+  ],
+  "traps": [
+    { "id": "tr_bolt_entry",   "cell": [26, 57], "type": "wall_bolt", "lethal": true,  "one_shot": true,
+      "clues": ["벽면 높이의 좁은 사출구", "바닥에 말라붙은 검은 자국"] },
+    { "id": "tr_pit_north",    "cell": [50, 18], "type": "pitfall",   "lethal": true,  "one_shot": false,
+      "clues": ["주변과 이음매가 어긋난 바닥돌", "발끝에 닿는 미세한 흔들림"] },
+    { "id": "tr_bolt_gallery", "cell": [17, 24], "type": "wall_bolt", "lethal": true,  "one_shot": true,
+      "clues": ["회랑 기둥 뒤의 마모된 홈", "화살대 조각"] },
+    { "id": "tr_pit_grand",    "cell": [86, 58], "type": "pitfall",   "lethal": true,  "one_shot": false,
+      "clues": ["대청 중앙을 비껴간 발자국들", "가장자리만 닳은 바닥"] },
+    { "id": "tr_bolt_east",    "cell": [121, 56],"type": "wall_bolt", "lethal": true,  "one_shot": true,
+      "clues": ["맞은편 벽의 얕은 파임", "부러진 볼트촉"] },
+    { "id": "tr_pit_cistern",  "cell": [84, 96], "type": "pitfall",   "lethal": true,  "one_shot": false,
+      "clues": ["물기가 스민 이음매", "아래에서 올라오는 찬 공기"] },
+    { "id": "tr_snare_swv",    "cell": [47, 100],"type": "snare",     "lethal": false, "one_shot": true,
+      "clues": ["바닥을 가로지르는 팽팽한 줄"] },
+    { "id": "tr_snare_far",    "cell": [157, 60],"type": "snare",     "lethal": false, "one_shot": true,
+      "clues": ["기둥 사이에 걸린 낡은 줄"] },
+    { "id": "tr_bolt_crypt",   "cell": [18, 96], "type": "wall_bolt", "lethal": true,  "one_shot": true,
+      "clues": ["관 뚜껑에 남은 관통 자국", "벽의 좁은 구멍"] },
+    { "id": "tr_pit_shrine",   "cell": [90, 14], "type": "pitfall",   "lethal": true,  "one_shot": false,
+      "clues": ["제단 앞을 크게 도는 마모 흔적"] }
+  ],
+
+  "_points_comment": [
+    "파밍/스폰 지점의 **좌표는 고정**이고 무엇이 놓이는지는 시드가 정한다 (FLR-002).",
+    "tier_hint는 두지 않는다 (D-016). 좋은 곳/나쁜 곳이 마이닝으로 드러나면 안 된다."
+  ],
+  "loot_points": [
+    { "id": "lp_entry",    "cell": [12, 54] },
+    { "id": "lp_gallery",  "cell": [14, 20] },
+    { "id": "lp_crypt",    "cell": [14, 100] },
+    { "id": "lp_north",    "cell": [44, 16] },
+    { "id": "lp_midw",     "cell": [44, 52] },
+    { "id": "lp_swv",      "cell": [42, 98] },
+    { "id": "lp_grand_n",  "cell": [76, 48] },
+    { "id": "lp_grand_s",  "cell": [98, 66] },
+    { "id": "lp_shrine",   "cell": [96, 12] },
+    { "id": "lp_cistern",  "cell": [92, 102] },
+    { "id": "lp_egal",     "cell": [118, 16] },
+    { "id": "lp_echam",    "cell": [128, 50] },
+    { "id": "lp_ecrypt",   "cell": [128, 92] },
+    { "id": "lp_farn",     "cell": [152, 18] },
+    { "id": "lp_fareast",  "cell": [164, 68] },
+    { "id": "lp_fars",     "cell": [152, 94] },
+    { "id": "lp_pk_nw",    "cell": [32, 22] },
+    { "id": "lp_pk_w",     "cell": [32, 76] },
+    { "id": "lp_pk_mid",   "cell": [66, 78] },
+    { "id": "lp_pk_ne",    "cell": [106, 28] },
+    { "id": "lp_pk_se",    "cell": [106, 78] },
+    { "id": "lp_pk_e",     "cell": [140, 34] },
+    { "id": "lp_pk_es",    "cell": [140, 80] },
+    { "id": "lp_pk_far",   "cell": [174, 60] }
+  ],
+  "spawn_points": [
+    { "id": "sp_north",   "cell": [48, 20] },
+    { "id": "sp_grand",   "cell": [88, 62] },
+    { "id": "sp_south",   "cell": [80, 94] },
+    { "id": "sp_east",    "cell": [120, 52] },
+    { "id": "sp_fareast", "cell": [158, 62] },
+    { "id": "sp_west",    "cell": [16, 92] }
+  ]
 }
