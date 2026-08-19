@@ -53,7 +53,8 @@ func resolve(def: FloorDefinition, envelope: AccessEnvelope,
 ## 고정 시작점을 쓰면 어떤 회차에서는 코앞에 계단이 놓인다.
 func resolve_from(def: FloorDefinition, envelope: AccessEnvelope,
 		party_id: StringName, generation_seed: int, start: Vector2i) -> Dictionary:
-	var route := _route_costs_from(def, start)
+	# 경로는 **허용 영역 안에서만** 계산한다 (`P2-REV-001`).
+	var route := _route_costs_from(def, start, envelope)
 	var candidates := _generate_candidates(def, envelope, route)
 	candidates = _apply_hard_constraints(def, envelope, candidates, route)
 
@@ -61,7 +62,7 @@ func resolve_from(def: FloorDefinition, envelope: AccessEnvelope,
 		# 소프트락 방지: 제약을 만족하는 후보가 없으면 가장 먼 도달 가능 지점으로 떨어진다.
 		# 계단이 없으면 층을 나갈 수 없으므로 실패해서는 안 된다.
 		push_warning("계단 Hard Constraint를 만족하는 후보가 없다 — 최장거리 지점으로 대체")
-		candidates = _fallback_candidates(def, route)
+		candidates = _fallback_candidates(def, route, envelope)
 
 	for c in candidates:
 		c["score"] = _engine_score(c, route)
@@ -105,9 +106,17 @@ static func _route_costs(def: FloorDefinition) -> Dictionary:
 
 
 ## 주어진 시작점에서 각 셀까지의 경로 비용 (BFS).
-static func _route_costs_from(def: FloorDefinition, start: Vector2i) -> Dictionary:
+##
+## `envelope`을 주면 **허용 영역 안의 칸만 통과**한다 (`P2-REV-001`).
+## 주지 않으면 지형만 본다 — 지형 그래프 자체를 볼 때 쓴다.
+##
+## 왜 중요한가: envelope을 무시하면 **경계 밖으로 나갔다 돌아와야만 닿는 곳**을
+## 도달 가능하다고 오판한다. 1층은 허용 영역이 통행 가능 칸 전체라 증상이 가려져 있지만,
+## 2층부터는 월드의 일부만 허용되므로(`FLR-023`) 계단이 실제로 못 가는 곳에 생길 수 있다.
+static func _route_costs_from(def: FloorDefinition, start: Vector2i,
+		envelope: AccessEnvelope = null) -> Dictionary:
 	var costs := {}
-	if not def.is_walkable(start):
+	if not _passable(def, envelope, start):
 		return costs
 	costs[start] = 0
 	var queue: Array[Vector2i] = [start]
@@ -118,11 +127,20 @@ static func _route_costs_from(def: FloorDefinition, start: Vector2i) -> Dictiona
 		head += 1
 		for d in dirs:
 			var nxt: Vector2i = cur + d
-			if costs.has(nxt) or not def.is_walkable(nxt):
+			if costs.has(nxt) or not _passable(def, envelope, nxt):
 				continue
 			costs[nxt] = int(costs[cur]) + 1
 			queue.append(nxt)
 	return costs
+
+
+## 경로가 지날 수 있는 칸인가 — 지형과 **허용 영역을 모두** 본다.
+static func _passable(def: FloorDefinition, envelope: AccessEnvelope, cell: Vector2i) -> bool:
+	if not def.is_walkable(cell):
+		return false
+	if envelope == null:
+		return true
+	return envelope.contains(WorldAnchor.new(def.world_id, def.world_region_ref, cell, 0))
 
 
 ## 희소 후보 — 모든 셀을 후보로 삼지 않는다.
@@ -175,12 +193,17 @@ func _apply_hard_constraints(def: FloorDefinition, envelope: AccessEnvelope,
 
 
 ## 제약을 만족하는 후보가 하나도 없을 때. **계단이 없으면 층을 나갈 수 없으므로 실패 금지.**
-static func _fallback_candidates(def: FloorDefinition, route: Dictionary) -> Array[Dictionary]:
+## **허용 영역 밖으로는 절대 나가지 않는다** — 못 가는 곳에 계단을 놓느니
+## 가까운 곳에 놓는 편이 낫다 (`P2-REV-001`).
+static func _fallback_candidates(def: FloorDefinition, route: Dictionary,
+		envelope: AccessEnvelope = null) -> Array[Dictionary]:
 	var best_cell := Vector2i.ZERO
 	var best := -1
 	var cells := def.sorted_walkable_cells()
 	for cell in cells:
 		if not route.has(cell):
+			continue
+		if not _passable(def, envelope, cell):
 			continue
 		if int(route[cell]) > best:
 			best = int(route[cell])

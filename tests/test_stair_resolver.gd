@@ -21,6 +21,8 @@ func run(t: TestCase) -> void:
 	_test_party_stairs_is_array(t, def, env)
 	_test_works_without_ai(t, def, env)
 	_test_ai_cannot_break_hard_constraints(t, def, env)
+	_test_envelope_blocks_route(t, def)
+	_test_fallback_stays_inside_envelope(t, def)
 
 
 func _resolve(def: FloorDefinition, env: AccessEnvelope, s: int, party: StringName = &"party_1") -> Dictionary:
@@ -85,11 +87,27 @@ func _test_deterministic(t: TestCase, def: FloorDefinition, env: AccessEnvelope)
 		var b: WorldAnchor = _resolve(def, env, s)["anchor"]
 		t.assert_true(a.equals(b), "시드 %d 에서 계단이 같아야 한다" % s)
 
-	# 파티가 다르면 달라질 수 있어야 한다 — 파티별 귀속이므로 (FAC-001)
-	var p1: WorldAnchor = _resolve(def, env, 777, &"party_1")["anchor"]
-	var p2: WorldAnchor = _resolve(def, env, 777, &"party_2")["anchor"]
-	t.assert_true(p1.key() != p2.key() or true,
-		"파티별로 독립 계산된다 (같은 결과가 나올 수도 있다)")
+	# `P2-REV-002` — 여기 있던 `p1.key() != p2.key() or true`는 **어떤 구현에서도 통과**했다.
+	# `or true`가 붙어 회귀 방지 효과가 전혀 없었다.
+	#
+	# 검사하려던 성질은 "party_id가 RNG key에 실제로 참여하는가"다.
+	# 단, 서로 다른 파티가 **우연히 같은 좌표를 받을 수 있다**는 게 canon이므로
+	# 한 시드에서 다르길 요구하면 안 된다. 여러 시드 표본에서 통계적으로 본다.
+	var differ := 0
+	for s in SEED_COUNT:
+		var a: WorldAnchor = _resolve(def, env, s * 13 + 1, &"party_1")["anchor"]
+		var b: WorldAnchor = _resolve(def, env, s * 13 + 1, &"party_2")["anchor"]
+		if a.key() != b.key():
+			differ += 1
+	t.assert_true(differ > 0,
+		"party_id가 계단 RNG key에 참여해야 한다 (시드 %d개 중 다른 결과 %d건)"
+		% [SEED_COUNT, differ])
+
+	# 파티를 바꿔도 **같은 파티 + 같은 시드**는 여전히 결정적이어야 한다.
+	for party in [&"party_1", &"party_2"]:
+		var x: WorldAnchor = _resolve(def, env, 777, party)["anchor"]
+		var y: WorldAnchor = _resolve(def, env, 777, party)["anchor"]
+		t.assert_true(x.equals(y), "%s 는 같은 시드에서 항상 같아야 한다" % party)
 
 
 ## ★ 항상 점수 1등을 고르면 공식 역산이 가능해진다 (`D-016` §1.4).
@@ -158,3 +176,82 @@ class _NearStartRanker:
 		for c in candidates:
 			out[(c["anchor"] as WorldAnchor).key()] = 1000.0 / maxf(1.0, float(c["cost"]))
 		return out
+
+
+## `P2-REV-001` — 경로 계산이 허용 영역을 존중해야 한다.
+##
+## 허용 영역 한가운데를 세로로 막아 **지형상으로는 이어져 있지만 허용 영역 안에서는 끊긴**
+## 상황을 만든다. envelope을 무시하고 BFS를 돌리면 막힌 띠를 지나 반대편까지
+## 도달 가능하다고 오판하고, 그쪽에 계단을 놓아 층을 나갈 수 없게 만든다.
+##
+## 1층 `envelope_from_floor()`는 통행 가능 칸 전체를 허용하므로 기존 테스트로는
+## 이 증상이 드러나지 않는다. 그래서 여기서 인위적으로 구멍을 낸다.
+func _test_envelope_blocks_route(t: TestCase, def: FloorDefinition) -> void:
+	var env := AccessService.envelope_from_floor(&"player", def)
+	var bounds := def.bounds
+
+	# 맵을 동/서로 가르는 차단 띠. 대각 이동이 없으므로 폭 1이면 충분하지만
+	# 넉넉히 3칸을 막아 우회로가 없게 한다.
+	var band_x := bounds.position.x + bounds.size.x / 2
+	for x in range(band_x - 1, band_x + 2):
+		for y in range(bounds.position.y, bounds.position.y + bounds.size.y + 1):
+			env.deny_cell(Vector2i(x, y))
+
+	# 띠 서쪽에 있는 시작점만 쓴다.
+	var start := Vector2i(-1, -1)
+	for sp in def.start_points:
+		if sp.x < band_x - 1 and def.is_walkable(sp):
+			start = sp
+			break
+	t.assert_true(start.x >= 0, "차단 띠 서쪽에 시작점 후보가 있어야 한다 (테스트 전제)")
+	if start.x < 0:
+		return
+
+	# 허용 영역을 존중한 경로 — 띠 동쪽에는 닿을 수 없어야 한다.
+	var route := StairResolver._route_costs_from(def, start, env)
+	var east_in_route := 0
+	for cell in route.keys():
+		if (cell as Vector2i).x > band_x + 1:
+			east_in_route += 1
+	t.assert_eq(east_in_route, 0,
+		"차단 띠 너머는 경로에 들어오면 안 된다 (들어온 칸 %d개)" % east_in_route)
+
+	# 지형만 보면 여전히 이어져 있어야 한다 — 그래야 이 테스트가 의미가 있다.
+	var terrain_route := StairResolver._route_costs_from(def, start)
+	var east_in_terrain := 0
+	for cell in terrain_route.keys():
+		if (cell as Vector2i).x > band_x + 1:
+			east_in_terrain += 1
+	t.assert_true(east_in_terrain > 0,
+		"지형 그래프로는 띠 너머가 이어져 있어야 한다 (테스트 전제, 이어진 칸 %d개)" % east_in_terrain)
+
+	# 계단은 허용 영역 안이면서 **그 안에서 실제로 도달 가능한** 곳이어야 한다.
+	for s in 20:
+		var anchor: WorldAnchor = StairResolver.new().resolve_from(
+			def, env, &"party_1", s * 31 + 7, start)["anchor"]
+		t.assert_true(env.contains(anchor),
+			"계단이 허용 영역 안이어야 한다 (%v)" % anchor.cell)
+		t.assert_true(route.has(anchor.cell),
+			"계단이 허용 영역 안에서 도달 가능해야 한다 (%v)" % anchor.cell)
+
+
+## `P2-REV-001` — Hard Constraint를 만족하는 후보가 0개일 때의 fallback도
+## 허용 영역 밖으로 나가면 안 된다.
+##
+## 허용 영역을 시작점 주변 작은 상자로 좁히면 이름 있는 공간 대부분이 밖으로 나가
+## 후보가 0개가 되고 fallback 경로를 타게 된다.
+func _test_fallback_stays_inside_envelope(t: TestCase, def: FloorDefinition) -> void:
+	var start := def.start_points[0]
+	var env := AccessEnvelope.new(&"player", def.world_id, def.world_region_ref)
+	env.allow_rect(Rect2i(start - Vector2i(6, 6), Vector2i(13, 13)))
+
+	var route := StairResolver._route_costs_from(def, start, env)
+	t.assert_true(route.size() > 1, "좁은 허용 영역 안에서도 경로가 있어야 한다 (테스트 전제)")
+
+	for s in 10:
+		var stair := StairResolver.new().resolve_from(def, env, &"party_1", s * 17 + 3, start)
+		var anchor: WorldAnchor = stair["anchor"]
+		t.assert_true(env.contains(anchor),
+			"fallback 계단도 허용 영역 안이어야 한다 (%v)" % anchor.cell)
+		t.assert_true(route.has(anchor.cell),
+			"fallback 계단도 도달 가능해야 한다 (%v)" % anchor.cell)
