@@ -5,205 +5,182 @@
 
 ## 현재 위치 — 2026-08-19
 
-- **PHASE 1 (이동/카메라)**: **완료 (`PLAYTESTED`)**
-- **PHASE 2**: **진행 중**
+- **PHASE 0**: 완료 (`VERIFIED`)
+- **PHASE 1 (이동/카메라)**: 완료 (`PLAYTESTED`)
+- **PHASE 2 (1층 공간/상태/계단/세이브)**: **구현 완료에 가깝지만 최종 `PLAYTESTED` 전 검토/수정 대기**
+  - [x] `P2-T0` Canon 가드 테스트
   - [x] `P2-T1` 공간 데이터 타입 (`WorldAnchor`, `AccessEnvelope`, 공유 `TerrainMutationState`)
-  - [x] `P2-T0` Canon 가드 테스트 + AccessEnvelope 형태 기반 교체
-  - [ ] `P2-T2` 1층 greybox + loader — **착수 가능 (`D-019`)**
-  - [ ] `P2-T3` 함정 정적 정의 / 동적 상태
-  - [ ] `P2-T4` AccessEnvelope 실제 Player 이동 연결
-  - [ ] `P2-T5` 계단 resolver
-  - [ ] `P2-T6` save/load + version/hash
-  - [ ] `P2-T7` 회귀 테스트 + 오너 PLAYTEST
-- **D-016**: Resolved. 설계 차단 해제.
-- **P2-T2 시작 범위**: `D-019` Resolved / DESIGN 기준선.
-- **FLR-014 무기 품질 충돌**: `D-020`으로 해소. 소설 원문 규칙 채택.
-- **구현 인계**: `docs/design/PHASE2_IMPLEMENTATION_HANDOFF.md`
-- **1층 소설 원문 참고**: `docs/reference/FLOOR1_NOVEL_SOURCE_NOTES.md`
-- **저장소**: `aa0607aa/Tower-Dev`, `main`
-- **엔진**: Godot `4.7.1-stable`
-- **canon 색인**: **149개 ID / 15도메인 / 통합 포인터 3개**
-- **설정서 원본**: `docs/SETTING_BIBLE_v1.1.docx`
-- **AI 검수용 사본**: `docs/SETTING_BIBLE_v1.1.md` — 직접 편집 금지, docx 개정 시 변환기 재실행
+  - [x] `P2-T2` 1층 고정 greybox + loader
+  - [x] `P2-T3` 함정/파밍 정적 정의와 동적 상태 분리
+  - [x] `P2-T4` AccessEnvelope 실제 Player 이동 연결
+  - [x] `P2-T5` 계단 resolver
+  - [x] `P2-T6` save/load + definition hash
+  - [x] `P2-T7` 자동 회귀/변이 검증
+  - [ ] **GPT 독립 검토에서 나온 pre-PHASE3 수정사항 처리**
+  - [ ] **오너가 1층 layout v2 재플레이 후 최종 체감 판정**
+- **PHASE 3**: 아직 착수하지 않는다. 위 두 항목을 닫은 뒤 진행.
 
-## 최신 오너 확정 — D-018~D-020
+- **저장소**: `aa0607aa/Tower-Dev`, `main`
+- **현재 검토 기준 HEAD**: `9e2b120fc2fb4135e1d4eba7e5f8828a648e9e1b`
+- **엔진**: Godot `4.7.1-stable`
+- **Canon 색인**: **149개 ID / 15도메인 / 통합 포인터 3개**
+- **설정서 원본**: `docs/SETTING_BIBLE_v1.1.docx`
+- **AI 검수용 사본**: `docs/SETTING_BIBLE_v1.1.md` — 직접 편집 금지
+
+## 최신 오너 확정 — D-018~D-023
 
 ### D-018 · 회차 시작 고정 문구
 
-각 회차 시작 시 시스템 메시지는 정확히 아래 문구를 사용한다.
-
 `[@회차 시작! 행운을 빕니다!]`
 
-- 문구 글자·띄어쓰기·기호는 고정.
-- 층 입장마다 반복하는 메시지가 아니라 **회차 시작 이벤트**에 귀속.
-- 위치/페이드/지속시간/효과음은 DESIGN.
-- 정본: `D-018`, `SYS-015`.
+- 회차 시작 때 한 번 표시.
+- 글자·띄어쓰기·기호 고정.
+- 층 진입마다 반복하는 문구가 아니다.
 
-### D-019 · P2-T2 1층 greybox 시작 범위
+### D-019 · 1층 greybox DESIGN 기준선
 
-첫 플레이 가능한 greybox는 아래를 **PLAYTEST용 DESIGN 기준선**으로 사용한다.
-
+최종 Canon 숫자가 아니라 PLAYTEST 시작값:
 - 긴 축 **160~220 타일**
 - 주요 공간 **14~20개**
 - 소형 파밍 포켓/막다른 길 **6~10개**
 - 큰 순환 루프 **3~5개**
-- 민첩 10 기준, 전투·루팅·함정 확인 없이 숙련 핵심동선은 **수 분대** 목표
 
-이 값은 원문 Canon 숫자가 아니라 구현을 시작하기 위한 기준선이다. `P2-T7` 오너 PLAYTEST에서
-크기/공간 수는 DESIGN 범위로 조정할 수 있다. **따라서 P2-T2는 더 이상 오너 결정 대기로 막혀 있지 않다.**
+현재 layout v2는 긴 축 **172타일**, 방 17 + 포켓 8의 범위 안에 있다.
 
 ### D-020 · 1층 스폰 무기 품질
 
-- 소설 원문 규칙을 따른다.
-- 1층 스폰 무기는 **대체로 품질이 나쁘지만 초기 대거보다는 낫다** (`FLR-014`).
-- 이전의 "대거보다 못할 수도 있다"는 일반 규칙은 폐기.
-- 파밍 지점 랜덤 배치, 석궁 수준 투사무기 상한, 총기 극저확률은 유지.
+1층 스폰 무기는 **대체로 품질이 나쁘지만 초기 대거보다는 낫다.**
+현재 `data/items/floor1_loot_table.json`의 무기/투사무기는 초기 대거 비교값보다 높게 두었다.
 
-## D-016 핵심 확정
+### D-021 · 오르골 초기 스탯 정정
 
-### 1. 1층 함정
+- 힘 **8** / 민첩 **11** / 지능 **15**.
+- ⚠ 설정서 v1.1 §24.1은 아직 8/12/14이므로 다음 설정서 개정 때 반영해야 한다.
+- 그때까지 `D-021`이 정본이다.
 
-- 위치·종류·구조 **고정**.
-- 활성/소모, 루팅/전투 흔적 등만 동적.
-- `tier_hint` 없음.
+### D-022 · 1층 시작 위치 랜덤화
 
-### 2. 실제 월드와 층
+- 1층 고정 지형과 별개로 시작 위치는 회차 시드로 선택한다.
+- 후보 목록은 `FloorDefinition`, 실제 선택 결과는 `FloorState.start_cell`에 저장한다.
+- 지형 고정(`FLR-001`)과 충돌하지 않는다.
 
-- 한 층은 실제 월드의 특정 위치 중 유배자에게 허용된 일부 (`D-017`).
-- **같은 월드 좌표의 물리 상태는 공유**한다.
-  - 지형 mutation
-  - NPC 생존/위치
-  - 실제 물체 상태
-- 유배자별로 갈리는 것은 AccessEnvelope, 목표 상태, 계단 귀속/발견 같은 탑 규칙이다.
+### D-023 · 마인드맵 성장 구조
 
-### 3. 맵의 끝 = 유배자 영향의 인과 경계
+- 빨강=STR / 초록=AGI / 파랑=INT 고정.
+- 숫자창 직접 배분이 아니라 연결된 색상 노드에 스탯 포인트를 투자.
+- **노드 1개 = 포인트 1 = 대응 스탯 +1**.
+- 한 가지의 스탯 노드 3개를 모두 채우면 스킬 노드에 도달하고 **즉시 랜덤 개화**.
+- 개화 스킬에서 새 가지가 뻗으며, 중심에서 멀수록 기존 빌드와 연관성이 강해진다.
+- 일정 전문화 깊이 이후 완전히 무관한 스킬은 후보에서 제외.
+- 임의 respec은 기본 불가.
+- 종족 변경 시 새 종족에 부적합한 스킬 subtree만 제거하고 해당 투자 포인트를 환원.
+- 정확한 전문화 깊이/연관도 공식/태그/가지 수·형태는 TBD.
+- 초기 PoE(2011~2013)는 `docs/reference/EARLY_POE_PASSIVE_TREE_REFERENCE.md`의 UX 참고일 뿐 Canon 출처가 아니다.
 
-경계를 넘을 수 없음:
-- 유배자 본체
-- 소환물/직접 통제 펫
-- 투사체
-- 기술/마법의 직접 효과
-- 던진/발사한 물체
-- 유배자 공격/스킬/밀치기로 강제 이동 중인 NPC/물체
+## PHASE 2 현재 구현 요약
 
-자기 의지로 움직이는 일반 NPC·야생동물과 독립 월드 시뮬레이션은 경계를 통과할 수 있다.
-경계에서 효과를 소멸/충돌/절단하는 최종 연출은 DESIGN이다.
+### 1. 공간/월드 모델
 
-### 4. 계단 배치 — 공정한 악의
+- `WorldAnchor`: 실제 월드 공간 주소.
+- `AccessEnvelope`: 유배자별 허용 영역/인과 경계.
+- `TerrainMutationState`: 유배자별이 아니라 월드가 공유하는 지형 변경 상태.
+- `FloorDefinition`: 1층의 고정 초기 정의.
+- `FloorState`: 전리품/스폰/함정 상태/계단/발견/시작점 등 회차의 동적 결과.
 
-층 진입 시 한 번 계산한다.
+### 2. 1층 layout v2
+
+`data/floors/floor1_fixed/floor1_layout.json`을 구역별로 차별화했다.
+
+- 서쪽 회랑: 열주형
+- 입구 광장: 열린 공간
+- 서쪽 납골: 분할된 좁은 셀
+- 북쪽: 좁은 미로/회랑
+- 중앙 대청: 큰 공간 + 내부 구조물
+- 남쪽: 붕괴/공동처럼 불규칙한 공간
+- 동쪽: 넓은 통로
+- 최동단: 열린 큰 홀
+
+통로 폭은 1/2/3/5칸을 섞고 꺾임을 추가했다.
+`blocks`로 내부 기둥/칸막이를 파내며, `space_anchor_cell()`이 막힌 기하학적 중심 대신 실제 통행 가능한 대표 칸을 선택한다.
+
+**GPT 검토 판단:** 구역 다양화 방향은 좋다. 다만 데이터 태그 `city`는 미래 시스템이 실제 도시 의미로 오해할 수 있으므로 `inner_complex`/`courtyard_complex` 같은 중립 이름으로 바꾸는 것을 권장한다. `opencaves`도 고대 사원의 붕괴·침식 구역이라는 테마 연결을 유지한다.
+
+### 3. 계단 resolver
+
+현재 구조:
 
 ```text
-Engine candidate generation
+Engine candidate
 → Hard Constraint
-→ Engine scorer
+→ Engine score
 → Optional AI ranking
-→ Engine Validator
-→ 상위 점수 밴드에서 seed 기반 가중 선택
-→ WorldAnchor로 실체화 + 결과 저장
+→ Validator
+→ 상위 band seeded selection
+→ WorldAnchor 저장
 ```
 
-핵심 조건:
-- 메인 스토리/층 목표와 정합
-- 즉시 층 스킵 방지
-- 허용 맵 규모 대비 충분한 상대 경로 거리
-- 최종 도달 가능
-- 서든데스/스토리 시간 예산 안에서 공략 가능
-- 정상 바닥일 필요 없음
+BFS 실제 경로 비용을 사용하고, AI가 없어도 동작한다. 시작 위치는 `D-022`의 실제 `start_cell`을 사용한다.
 
-AI는 엔진이 만든 합법 후보의 **의미/귀찮음 ranking만 보조**한다.
-AI 실패/비사용 시 engine scorer만으로 끝까지 진행한다 (`SYS-007`).
-1등 한 점을 고정하지 않고 상위 밴드에서 seed 선택해 역산 가능성을 낮춘다.
+**GPT 독립 검토에서 수정 필요:**
 
-### 5. 공간 구조
+- **P2-REV-001 — AccessEnvelope-aware 경로 계산**
+  - 현재 BFS는 `FloorDefinition`의 모든 walkable 셀을 탐색하고, 후보 지점만 envelope 안인지 확인한다.
+  - 향후 구멍/부분 허용 영역에서는 **경계 밖으로 나갔다 다시 들어오는 경로**를 유효 경로로 오판할 수 있다.
+  - hard constraint의 경로 탐색 자체가 AccessEnvelope를 존중해야 한다.
+  - fallback 후보도 반드시 envelope 내부에서만 선택해야 한다.
+  - 현재 1층은 envelope가 초기 walkable 전체라 증상이 드러나지 않는다.
 
-```text
-RunState
-└─ WorldState
-   ├─ WorldTerrainDefinition / TerrainBody
-   │  └─ TerrainMutationState   # 월드 공유
-   ├─ FloorDefinition
-   │  ├─ world_region_ref
-   │  ├─ geology_region_ref
-   │  ├─ story/objective graph
-   │  └─ authored overlay / POI
-   └─ FloorState
-      ├─ loot / NPC / trap dynamic state
-      ├─ party_stairs[]
-      ├─ sudden-death / event state
-      └─ access_by_exile_or_party[] -> AccessEnvelope
-```
+- **P2-REV-002 — 의미 없는 항상-참 테스트 제거**
+  - `tests/test_stair_resolver.gd`의 `p1.key() != p2.key() or true`는 항상 참이므로 아무것도 검증하지 않는다.
+  - 같은 파티+시드 결정성은 유지하고, 서로 다른 party ID가 독립 stream에 참여함을 여러 seed에서 검증하거나 해당 assertion을 제거한다.
 
-- `TerrainMutationState`를 유배자별 FloorState에 복제하지 않는다.
-- `AccessEnvelope`는 실제 월드의 끝이 아니다.
-- `Rect2i`는 broad bounds 최적화용일 수 있으나 행동 반경 정본이 아니다.
-- P2-T1 구현 뒤 AccessEnvelope는 **형태 목록 + 구멍/돌출 예외** 구조로 교체되어 와이드 맵 메모리 폭증을 피했다.
-- 1층 TileMapLayer는 저작/표시 입력으로 사용 가능.
+### 4. 세이브/definition hash
 
-### 6. 지질 정보는 파일로 보존
+- 실체화 결과를 저장하며 로드시 seed로 다시 생성하지 않는다.
+- `FloorSave`는 `definition_hash`가 달라지면 `DEFINITION_CHANGED`를 반환한다.
 
-완전한 행성 지질 시뮬레이션은 지금 만들지 않더라도 지질 정의를 채팅에만 남기지 않는다.
+**GPT 독립 검토에서 정밀화 필요:**
 
-- 계약: `data/worlds/README.md`
-- 스키마: `data/worlds/geology_profile.schema.json`
-- 실제 월드: `data/worlds/<world_id>/geology_profile.json`
+- **P2-REV-003 — definition_hash 계약 정리**
+  - 로더 주석은 “기하만 해시”라고 설명하지만 실제 해시는 방/통로/blocks뿐 아니라 trap/loot/spawn 위치·일부 속성도 포함한다.
+  - 반대로 trap `lethal`, `one_shot`, `clues` 등 저장된 회차의 의미를 바꿀 수 있는 고정 정의 일부는 포함하지 않는다.
+  - 따라서 **정말 spatial compatibility hash인지, immutable floor-definition hash인지 계약을 하나로 정한 뒤** 필드를 맞춰야 한다.
+  - 장기 세이브 계약이 굳기 전인 지금 정리하는 편이 싸다.
 
-미정값은 임의 숫자를 넣지 않고 `status=TBD` + `null`/빈 배열로 둔다.
+### 5. AccessEnvelope 향후 주의
 
-## P2-T2 — 1층 크기/방 수 설계 상태
+1층은 현재 `envelope_from_floor()`가 초기 walkable 영역을 허용한다.
+그러나 `FLR-027`상 지형은 나중에 파괴/굴착 가능하므로, **행동 반경을 초기 통행 가능 셀과 영구적으로 동일시하면 안 된다.**
+현재 구현은 PHASE 2 편의 함수로 분리되어 있어 구조 변경 여지는 확보돼 있다.
 
-설정서 v1.1과 2026-08-19 오너 제공 **소설 초반 캡처**를 대조했다.
+## PHASE 2 테스트 상태
 
-### 직접 복원 가능한 숫자
+Claude 기록 기준 최신 layout v2에서:
 
-**없음.** 정확한 미터/타일 크기나 방 개수는 어느 쪽에도 명시되지 않는다.
+- 단위 **576 단언** 통과
+- 통합 **20 단언** 통과
+- 반복 3회 안정성 확인
+- 이동 E2E는 변이(`velocity *= delta`) 주입 시 실패하는 것을 재확인
 
-### 강한 원문 단서
+GPT는 이 세션에서 Godot 런타임을 직접 재실행한 것이 아니라 **GitHub 코드/테스트/로그 정합성을 독립 검토**했다.
 
-- 1층은 고대 사원풍 **고정 미로**이고 반복 회차를 통해 외우는 것이 성장이다.
-- 함정/매복/파밍 선택지는 충분히 많아야 한다.
-- 반면 1층은 소설에서 **복잡할 것도 없고 난관도 적은 곳**, 과거 게임에서는
-  **조작법 튜토리얼에 가까운 저난이도 스테이지**로 묘사된다.
-- 서든데스 1시간은 지형을 걷는 데만 1시간 걸린다는 뜻이 아니라,
-  파밍·함정 확인·전투·욕심을 얼마나 더 낼지 포함한 플레이 예산이다.
-- 미로 초반은 대체로 공평하다는 서술이 있다.
+## PHASE 3 전에 할 일
 
-### 승인된 첫 greybox 기준 — D-019
+1. **[Claude] P2-REV-001** — StairResolver BFS/fallback을 AccessEnvelope-aware로 수정하고 구멍/차단 영역 회귀 테스트 추가.
+2. **[Claude] P2-REV-002** — 항상 참인 party 계단 테스트를 제거/대체.
+3. **[Claude] P2-REV-003** — definition hash의 의미와 포함 필드 정리 + 관련 테스트 수정.
+4. **[Claude] 문서/주석 정리** — `scripts/core/main.gd` 상단의 "P2-T3~T6 아직 없음" 같은 오래된 설명을 최신 상태로 고친다.
+5. **[Claude] 권고** — layout 태그 `city`를 고대 사원에 맞는 의미 중립 이름으로 변경. 기하 자체는 유지 가능.
+6. **[Claude]** 위 수정 뒤 전체 단위/통합/변이 테스트 재실행하고 로그에 결과 기록.
+7. **[오너]** layout v2를 다시 플레이해 구역별 성격 차이/밀도/규모 체감을 판정.
+8. **[GPT]** 수정 diff를 빠르게 재검토. 이상 없고 오너 PLAYTEST가 통과하면 PHASE 2를 닫고 PHASE 3로 이동.
 
-- 긴 축 **160~220 타일**
-- 주요 공간 **14~20개**
-- 소형 파밍 포켓/막다른 길 **6~10개**
-- 큰 루프 **3~5개**
+## 구현 주의 / 장기 인계
 
-이 수치는 **Canon 숫자가 아니라 PLAYTEST용 DESIGN 시작점**이다.
-Claude는 이 기준으로 `P2-T2`를 바로 구현할 수 있다.
-
-## PHASE 1 결과 (완료)
-
-- `CharacterBody2D` 이동/충돌 + Camera2D
-- 대각선 정규화 / 프레임 독립성
-- 오너 카메라 PLAYTESTED
-- 테스트 러너 `D-015`: 자체 SceneTree
-- 실제 Player/Input/physics E2E 회귀 테스트 포함
-- integration harness와 test case 분리
-- `tools/run.ps1` Godot 4.7.1 버전 경고 포함
-
-## 구현 주의
-
-- 1층 "고정"은 **초기 정의 고정**. 플레이 중 terrain mutation을 막는 뜻이 아니다.
-- 계단은 일반 타일 오브젝트에 종속시키지 않는다. `WorldAnchor` 계열 주소를 사용한다.
-- 같은 월드 좌표의 terrain/NPC/물체 상태를 유배자별로 복제하지 않는다.
-- AccessEnvelope는 유배자 본체뿐 아니라 **유배자가 원인이 된 직접 영향**의 경계를 강제해야 한다.
-- NPC LOD는 `D-014` G-5 결정성 불변식을 유지한다. 실제 월드는 플레이어 행동 반경 밖에서도 존재한다.
-- `P2-T2` greybox는 `D-019` 시작값을 사용하되 최종값처럼 하드코딩하지 않는다. PLAYTEST 튜닝 가능하게 둔다.
-- `P2-T3` 파밍 구현은 `D-020/FLR-014`의 무기 품질 규칙을 따른다.
-- 설정서 밖 새 확정 규칙은 `DECISIONS.md`와 관련 Canon 색인에 함께 남긴다.
-- Markdown 끝 LF 유지. 다른 PC 작업은 Godot `--import` 먼저.
-
-## 다음 작업
-
-1. **[Claude] `P2-T2` 1층 greybox + loader를 바로 착수.** `D-019` 시작범위 사용.
-2. **[Claude]** `TestRoom.tscn`을 Canon 지형으로 승격하지 말고 P2-T2에서 교체/폐기.
-3. **[Claude]** P2-T2 완료 뒤 자동 테스트와 실제 실행 결과를 로그에 기록하고 인계.
-4. **[오너+GPT]** `P2-T0`/`P2-T1` 구현물 독립 검토는 별도로 남아 있음.
-5. **[오너]** P2-T7에서 greybox 크기/동선 최종 체감 확인.
+- `D-021`: 다음 설정서 개정 때 오르골 8/11/15 반영.
+- `D-023`: `CHR-020`의 “레벨 3당 스킬 후보” 표현은 PHASE 6 전에 “레벨당 포인트 DESIGN + 가지 3노드 완성 시 개화”로 정합화한다.
+- 마인드맵 전문화 임계 깊이/연관도/태그/가지 수는 TBD — 구현 편의로 임의 확정 금지.
+- `BASE_SPEED`는 PHASE 6에서 민첩 보정과 함께 재확정.
+- PHASE 3에서 실제 함정/아이템 상호작용이 붙으면 `debug_overlay.gd` 삭제 예정.
+- 다른 PC 작업 시 Godot `--import` 먼저.
+- 배포 렌더링 경로는 PHASE 11 (`B-003`).
