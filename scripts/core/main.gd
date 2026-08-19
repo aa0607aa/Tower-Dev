@@ -34,19 +34,20 @@ func _ready() -> void:
 	move_child(_floor_view, 0)
 	_floor_view.build(_floor_def)
 
-	if not _floor_def.start_points.is_empty():
-		var start: Vector2i = _floor_def.start_points[0]
-		_player.global_position = Vector2(start.x * CELL + CELL / 2.0, start.y * CELL + CELL / 2.0)
-
 	# 행동 반경 (`FLR-017` `FLR-024`). 1층은 걸을 수 있는 곳 전부가 허용 영역이지만,
 	# 2층 이후에는 실제 월드가 더 넓고 그중 일부만 허용된다 (`FLR-023`).
 	# 지형과 별개 개념이므로 여기서 명시적으로 만들어 넘긴다.
 	_player.access_envelope = AccessService.envelope_from_floor(&"player", _floor_def)
 
-	# 층 진입 시 계단을 한 번 실체화한다 (`FAC-012`). 로드 때 다시 굴리지 않는다.
+	# 시작 위치는 회차마다 시드가 고른다 (`D-022`). 결과는 FloorState에 저장된다.
 	_floor_state = FloorPopulator.populate(_floor_def, RUN_SEED)
-	_floor_state.party_stairs.append(
-		StairResolver.new().resolve(_floor_def, _player.access_envelope, &"party_1", RUN_SEED))
+	var start := _floor_state.start_cell
+	_player.global_position = Vector2(start.x * CELL + CELL / 2.0, start.y * CELL + CELL / 2.0)
+
+	# 층 진입 시 계단을 한 번 실체화한다 (`FAC-012`). 로드 때 다시 굴리지 않는다.
+	# **이번 회차의 실제 시작점**을 기준으로 계산해야 안티 스킵이 의미를 갖는다.
+	_floor_state.party_stairs.append(StairResolver.new().resolve_from(
+		_floor_def, _player.access_envelope, &"party_1", RUN_SEED, start))
 
 	var stair: WorldAnchor = _floor_state.party_stairs[0]["anchor"]
 
@@ -54,9 +55,9 @@ func _ready() -> void:
 		_floor_def.spaces.size(), _floor_def.walkable_count(),
 		_floor_def.long_axis(), _floor_def.definition_hash.substr(0, 8),
 	])
-	GameLog.info("Main", "함정 %d · 파밍 %d · 스폰 %d · 계단 %s" % [
+	GameLog.info("Main", "함정 %d · 파밍 %d · 스폰 %d · 시작 %v · 계단 %s" % [
 		_floor_def.traps.size(), _floor_def.loot_points.size(),
-		_floor_def.spawn_points.size(), stair.key(),
+		_floor_def.spawn_points.size(), start, stair.key(),
 	])
 
 	# 개발용 오버레이 — 함정·파밍·계단 마커. 기본 꺼짐, F1로 토글.

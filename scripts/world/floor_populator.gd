@@ -25,6 +25,13 @@ static func populate(def: FloorDefinition, generation_seed: int) -> FloorState:
 	state.definition_hash = def.definition_hash
 	state.layout_version = def.layout_version
 
+	# 시작 위치 (`D-022`). 후보는 고정이고 어느 것을 쓰느냐가 시드의 몫이다.
+	# 계단과 **다른 스트림**을 쓴다 — 같은 스트림이면 시작점을 하나 늘렸을 때
+	# 계단 위치까지 통째로 달라진다.
+	if not def.start_points.is_empty():
+		var srng := _stream(generation_seed, "start", def.floor_id)
+		state.start_cell = def.start_points[srng.randi_range(0, def.start_points.size() - 1)]
+
 	# 함정 — 위치·종류는 고정이고 여기서 정하는 것은 **초기 상태**뿐이다.
 	for trap in def.traps:
 		state.trap_states[trap["id"]] = {"armed": true, "fired": false}

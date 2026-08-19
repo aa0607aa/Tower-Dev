@@ -84,7 +84,101 @@
     { "id": "p_far",  "width": 2, "segments": [[170, 61, 172, 61]] }
   ],
 
-  "start_points": [[18, 58]],
+  "_blocks_comment": [
+    "방/통로를 채운 **뒤에 파내는** 내부 구조물이다. 기둥·칸막이·미로 벽.",
+    "큰 통로 느낌은 유지하면서 그 안에 작은 길이 생기게 하는 것이 목적이다 (오너 2026-08-19).",
+    "연결성 테스트가 고립을 잡으므로 과감히 넣어도 된다 — 끊기면 즉시 실패한다."
+  ],
+  "blocks": [
+    { "id": "b_grand_pillars_a", "rect": [76, 50, 4, 6] },
+    { "id": "b_grand_pillars_b", "rect": [88, 50, 4, 6] },
+    { "id": "b_grand_pillars_c", "rect": [76, 62, 4, 6] },
+    { "id": "b_grand_pillars_d", "rect": [88, 62, 4, 6] },
+    { "id": "b_grand_core",      "rect": [82, 56, 4, 6] },
+    { "id": "b_grand_wing",      "rect": [96, 48, 3, 14] },
+
+    { "id": "b_entry_spine",  "rect": [14, 54, 3, 9] },
+    { "id": "b_entry_stub",   "rect": [22, 50, 3, 6] },
+    { "id": "b_entry_stub2",  "rect": [22, 62, 3, 6] },
+
+    { "id": "b_gallery_row_a", "rect": [11, 18, 3, 5] },
+    { "id": "b_gallery_row_b", "rect": [18, 18, 3, 5] },
+    { "id": "b_gallery_row_c", "rect": [11, 27, 3, 5] },
+    { "id": "b_gallery_row_d", "rect": [18, 27, 3, 5] },
+
+    { "id": "b_crypt_aisle_a", "rect": [11, 92, 3, 7] },
+    { "id": "b_crypt_aisle_b", "rect": [18, 92, 3, 7] },
+    { "id": "b_crypt_aisle_c", "rect": [11, 103, 3, 5] },
+
+    { "id": "b_north_maze_a", "rect": [41, 13, 4, 4] },
+    { "id": "b_north_maze_b", "rect": [49, 13, 4, 4] },
+    { "id": "b_north_maze_c", "rect": [57, 13, 4, 4] },
+    { "id": "b_north_maze_d", "rect": [45, 20, 4, 4] },
+    { "id": "b_north_maze_e", "rect": [53, 20, 4, 4] },
+
+    { "id": "b_midw_wall_a", "rect": [41, 50, 3, 8] },
+    { "id": "b_midw_wall_b", "rect": [51, 58, 3, 9] },
+
+    { "id": "b_cistern_ring_a", "rect": [76, 90, 4, 5] },
+    { "id": "b_cistern_ring_b", "rect": [84, 90, 4, 5] },
+    { "id": "b_cistern_ring_c", "rect": [92, 90, 3, 5] },
+    { "id": "b_cistern_ring_d", "rect": [80, 99, 4, 5] },
+    { "id": "b_cistern_ring_e", "rect": [88, 99, 4, 5] },
+
+    { "id": "b_egal_aisle_a", "rect": [117, 16, 3, 6] },
+    { "id": "b_egal_aisle_b", "rect": [124, 16, 3, 6] },
+    { "id": "b_egal_aisle_c", "rect": [131, 16, 3, 6] },
+    { "id": "b_egal_aisle_d", "rect": [120, 26, 4, 5] },
+    { "id": "b_egal_aisle_e", "rect": [128, 26, 4, 5] },
+
+    { "id": "b_echam_split", "rect": [116, 50, 3, 10] },
+    { "id": "b_echam_split2", "rect": [124, 54, 4, 10] },
+
+    { "id": "b_ecrypt_a", "rect": [116, 92, 4, 6] },
+    { "id": "b_ecrypt_b", "rect": [124, 92, 4, 6] },
+    { "id": "b_ecrypt_c", "rect": [120, 101, 4, 4] },
+
+    { "id": "b_fareast_a", "rect": [150, 52, 4, 7] },
+    { "id": "b_fareast_b", "rect": [159, 52, 4, 7] },
+    { "id": "b_fareast_c", "rect": [154, 63, 4, 7] },
+    { "id": "b_fareast_d", "rect": [163, 63, 4, 7] },
+
+    { "id": "b_swv_a", "rect": [40, 95, 4, 5] },
+    { "id": "b_swv_b", "rect": [48, 95, 4, 5] },
+    { "id": "b_swv_c", "rect": [44, 103, 4, 4] },
+
+    { "id": "b_shrine_a", "rect": [84, 11, 4, 4] },
+    { "id": "b_shrine_b", "rect": [92, 11, 4, 4] },
+
+    { "id": "b_farn_a", "rect": [152, 17, 4, 4] },
+    { "id": "b_farn_b", "rect": [159, 17, 4, 4] },
+
+    { "id": "b_fars_a", "rect": [152, 93, 4, 4] },
+    { "id": "b_fars_b", "rect": [159, 93, 4, 5] }
+  ],
+
+  "_start_comment": [
+    "시작 위치 **후보**다. 실제 시작점은 회차마다 시드가 고른다 (D-022).",
+    "후보 목록은 고정이고 선택 결과는 FloorState에 저장된다 (SYS-003).",
+    "시작점이 달라져도 계단 안티 스킵 제약이 성립해야 한다 (FAC-012) — 테스트가 검사한다.",
+    "서로 멀리 떨어뜨려 회차마다 다른 경로 감각이 나오게 했다."
+  ],
+  "start_points": [
+    [18, 58],
+    [16, 20],
+    [16, 104],
+    [44, 12],
+    [56, 66],
+    [46, 12],
+    [80, 68],
+    [94, 104],
+    [118, 12],
+    [130, 64],
+    [130, 104],
+    [152, 24],
+    [166, 70],
+    [152, 104]
+  ],
 
   "_traps_comment": [
     "함정의 위치·종류·구조·사전 단서는 모두 고정이다 (FLR-001, D-012 2026-08-18 정정).",
@@ -109,7 +203,7 @@
       "clues": ["바닥을 가로지르는 팽팽한 줄"] },
     { "id": "tr_snare_far",    "cell": [157, 60],"type": "snare",     "lethal": false, "one_shot": true,
       "clues": ["기둥 사이에 걸린 낡은 줄"] },
-    { "id": "tr_bolt_crypt",   "cell": [18, 96], "type": "wall_bolt", "lethal": true,  "one_shot": true,
+    { "id": "tr_bolt_crypt",   "cell": [15, 96], "type": "wall_bolt", "lethal": true,  "one_shot": true,
       "clues": ["관 뚜껑에 남은 관통 자국", "벽의 좁은 구멍"] },
     { "id": "tr_pit_shrine",   "cell": [90, 14], "type": "pitfall",   "lethal": true,  "one_shot": false,
       "clues": ["제단 앞을 크게 도는 마모 흔적"] }
@@ -123,19 +217,19 @@
     { "id": "lp_entry",    "cell": [12, 54] },
     { "id": "lp_gallery",  "cell": [14, 20] },
     { "id": "lp_crypt",    "cell": [14, 100] },
-    { "id": "lp_north",    "cell": [44, 16] },
+    { "id": "lp_north",    "cell": [46, 18] },
     { "id": "lp_midw",     "cell": [44, 52] },
-    { "id": "lp_swv",      "cell": [42, 98] },
+    { "id": "lp_swv",      "cell": [38, 94] },
     { "id": "lp_grand_n",  "cell": [76, 48] },
     { "id": "lp_grand_s",  "cell": [98, 66] },
     { "id": "lp_shrine",   "cell": [96, 12] },
     { "id": "lp_cistern",  "cell": [92, 102] },
-    { "id": "lp_egal",     "cell": [118, 16] },
+    { "id": "lp_egal",     "cell": [115, 14] },
     { "id": "lp_echam",    "cell": [128, 50] },
     { "id": "lp_ecrypt",   "cell": [128, 92] },
-    { "id": "lp_farn",     "cell": [152, 18] },
-    { "id": "lp_fareast",  "cell": [164, 68] },
-    { "id": "lp_fars",     "cell": [152, 94] },
+    { "id": "lp_farn",     "cell": [150, 15] },
+    { "id": "lp_fareast",  "cell": [168, 52] },
+    { "id": "lp_fars",     "cell": [150, 92] },
     { "id": "lp_pk_nw",    "cell": [32, 22] },
     { "id": "lp_pk_w",     "cell": [32, 76] },
     { "id": "lp_pk_mid",   "cell": [66, 78] },
@@ -146,8 +240,8 @@
     { "id": "lp_pk_far",   "cell": [174, 60] }
   ],
   "spawn_points": [
-    { "id": "sp_north",   "cell": [48, 20] },
-    { "id": "sp_grand",   "cell": [88, 62] },
+    { "id": "sp_north",   "cell": [54, 12] },
+    { "id": "sp_grand",   "cell": [94, 66] },
     { "id": "sp_south",   "cell": [80, 94] },
     { "id": "sp_east",    "cell": [120, 52] },
     { "id": "sp_fareast", "cell": [158, 62] },

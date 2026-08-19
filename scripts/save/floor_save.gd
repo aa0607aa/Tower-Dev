@@ -86,6 +86,8 @@ static func _rebuild(d: Dictionary) -> FloorState:
 	state.definition_hash = String(d.get("definition_hash", ""))
 	state.layout_version = int(d.get("layout_version", 0))
 	state.elapsed_seconds = float(d.get("elapsed_seconds", 0.0))
+	var sc: Array = d.get("start_cell", [0, 0])
+	state.start_cell = Vector2i(int(sc[0]), int(sc[1]))
 
 	for k in (d.get("trap_states", {}) as Dictionary):
 		state.trap_states[StringName(k)] = (d["trap_states"] as Dictionary)[k]

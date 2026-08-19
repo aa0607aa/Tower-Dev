@@ -15,6 +15,7 @@ func run(t: TestCase) -> void:
 
 	_test_reachable_for_many_seeds(t, def, env)
 	_test_anti_skip(t, def, env)
+	_test_anti_skip_from_every_start(t, def, env)
 	_test_deterministic(t, def, env)
 	_test_not_always_argmax(t, def, env)
 	_test_party_stairs_is_array(t, def, env)
@@ -59,6 +60,22 @@ func _test_anti_skip(t: TestCase, def: FloorDefinition, env: AccessEnvelope) -> 
 	t.assert_eq(too_close, 0,
 		"계단이 시작점에 너무 가까우면 안 된다 (기준 %.2f, 위반 %d)"
 		% [StairResolver.MIN_ROUTE_RATIO, too_close])
+
+
+## D-022 — 시작점이 회차마다 달라도 모든 후보에서 안티 스킵이 성립해야 한다.
+func _test_anti_skip_from_every_start(t: TestCase, def: FloorDefinition, env: AccessEnvelope) -> void:
+	for sp in def.start_points:
+		var route := StairResolver._route_costs_from(def, sp)
+		var max_cost := 0
+		for c in route.values():
+			max_cost = maxi(max_cost, int(c))
+		var violations := 0
+		for s in 12:
+			var anchor: WorldAnchor = StairResolver.new().resolve_from(def, env, &"p", s * 97 + 3, sp)["anchor"]
+			if float(route.get(anchor.cell, 0)) / float(max_cost) < StairResolver.MIN_ROUTE_RATIO:
+				violations += 1
+		t.assert_eq(violations, 0,
+			"시작점 %v 에서도 안티 스킵이 성립해야 한다 (위반 %d)" % [sp, violations])
 
 
 ## `SYS-003` — 같은 시드·같은 파티면 항상 같은 계단. 로드할 때 리롤되면 안 된다.

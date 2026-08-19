@@ -19,6 +19,8 @@ const PLAYER_SCENE := "res://scenes/player/Player.tscn"
 const DURATION := 0.5
 ## 프레임률이 달라도 같은 거리를 이동해야 한다. 물리 tick 오차를 감안한 허용치(px).
 const DISTANCE_TOLERANCE := 1.0
+## 틱레이트 변경이 실제로 반영되기를 기다리는 프레임 수.
+const SETTLE_FRAMES := 3
 
 
 func run(tree: SceneTree, t: TestCase) -> void:
@@ -58,7 +60,11 @@ func _measure(tree: SceneTree, action: String, ticks_per_second: int) -> float:
 	tree.root.add_child(player)
 	# 벽이 없는 빈 공간. 충돌은 test_player_collision.gd가 따로 본다.
 	player.global_position = Vector2.ZERO
-	await tree.physics_frame
+	# `physics_ticks_per_second` 변경은 **한 프레임 늦게 적용**된다.
+	# 바로 측정하면 첫 프레임이 이전 틱레이트의 delta로 돌아 거리가 어긋난다
+	# (30 tick 측정에서 정확히 `160/60 = 2.67px`만큼 모자랐다).
+	for _i in SETTLE_FRAMES:
+		await tree.physics_frame
 
 	var start := player.global_position
 	Input.action_press(action)
@@ -78,7 +84,8 @@ func _measure_diagonal(tree: SceneTree, ticks_per_second: int) -> float:
 	var player: CharacterBody2D = (load(PLAYER_SCENE) as PackedScene).instantiate()
 	tree.root.add_child(player)
 	player.global_position = Vector2.ZERO
-	await tree.physics_frame
+	for _i in SETTLE_FRAMES:
+		await tree.physics_frame
 
 	var start := player.global_position
 	Input.action_press("move_right")

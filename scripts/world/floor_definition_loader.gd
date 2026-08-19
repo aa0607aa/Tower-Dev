@@ -69,6 +69,17 @@ static func build(src: Dictionary) -> FloorDefinition:
 			_fill_segment(def, a, b, width)
 			hash_parts.append("corridor|%s|%d,%d,%d,%d,%d" % [cid, a.x, a.y, b.x, b.y, width])
 
+	# 내부 구조물 — 방/통로 안에서 **파내는** 사각형.
+	#
+	# 방과 통로만으로는 "큰 공간"밖에 못 만든다. 큰 통로 느낌을 유지하면서 그 안에
+	# 기둥·칸막이·미로를 넣으려면 채운 뒤 빼는 단계가 필요하다.
+	# 순서가 중요하다 — 반드시 방/통로를 모두 채운 **뒤에** 제거해야 한다.
+	for blk in src.get("blocks", []):
+		var rect := _to_rect(blk["rect"])
+		_carve_rect(def, rect)
+		hash_parts.append("block|%s|%d,%d,%d,%d" % [
+			blk.get("id", ""), rect.position.x, rect.position.y, rect.size.x, rect.size.y])
+
 	for p in src.get("start_points", []):
 		def.start_points.append(Vector2i(int(p[0]), int(p[1])))
 
@@ -112,6 +123,13 @@ static func _fill_rect(def: FloorDefinition, rect: Rect2i) -> void:
 	for y in range(rect.position.y, rect.end.y):
 		for x in range(rect.position.x, rect.end.x):
 			def._add_walkable(Vector2i(x, y))
+
+
+## 채워진 영역에서 다시 빼낸다. 기둥·칸막이·미로 벽을 만드는 데 쓴다.
+static func _carve_rect(def: FloorDefinition, rect: Rect2i) -> void:
+	for y in range(rect.position.y, rect.end.y):
+		for x in range(rect.position.x, rect.end.x):
+			def._remove_walkable(Vector2i(x, y))
 
 
 ## 축 정렬 통로. 대각선 통로는 지금 필요 없고, 허용하면 저작 실수가 조용히 통과한다.

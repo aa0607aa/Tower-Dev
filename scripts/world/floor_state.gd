@@ -38,6 +38,11 @@ var party_stairs: Array[Dictionary] = []
 ## 발견한 셀 (`FAC-003` — 계단은 직접 발견해야 한다).
 var discovered_cells: Dictionary = {}
 
+## 이번 회차에 실제로 뽑힌 시작 위치 (`D-022`).
+## 후보 목록은 `FloorDefinition`(고정)에 있고 **선택 결과가 여기 저장**된다.
+## 로드할 때 다시 뽑지 않는다 (`SYS-003`).
+var start_cell: Vector2i = Vector2i.ZERO
+
 var elapsed_seconds: float = 0.0
 var event_flags: Dictionary = {}
 
@@ -82,6 +87,7 @@ func to_save_dict() -> Dictionary:
 		"loot": _sorted_dict(loot),
 		"spawns": _sorted_dict(spawns),
 		"party_stairs": _stairs_to_save(),
+		"start_cell": [start_cell.x, start_cell.y],
 		"discovered_cells": _sorted_cells(discovered_cells),
 		"elapsed_seconds": elapsed_seconds,
 		"event_flags": _sorted_dict(event_flags),

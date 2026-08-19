@@ -42,7 +42,18 @@ var ai_ranker: Object = null
 ## `party_id`별로 하나씩 만든다 — 단일 `stair_id`가 아니다 (`FAC-002`).
 func resolve(def: FloorDefinition, envelope: AccessEnvelope,
 		party_id: StringName, generation_seed: int) -> Dictionary:
-	var route := _route_costs(def)
+	var start := def.start_points[0] if not def.start_points.is_empty() else Vector2i.ZERO
+	return resolve_from(def, envelope, party_id, generation_seed, start)
+
+
+## 시작점을 명시해 계단을 계산한다.
+##
+## `D-022`로 시작점이 회차마다 달라지므로, 계단의 안티 스킵 판정도
+## **그 회차의 실제 시작점**을 기준으로 해야 한다.
+## 고정 시작점을 쓰면 어떤 회차에서는 코앞에 계단이 놓인다.
+func resolve_from(def: FloorDefinition, envelope: AccessEnvelope,
+		party_id: StringName, generation_seed: int, start: Vector2i) -> Dictionary:
+	var route := _route_costs_from(def, start)
 	var candidates := _generate_candidates(def, envelope, route)
 	candidates = _apply_hard_constraints(def, envelope, candidates, route)
 
@@ -88,10 +99,16 @@ func resolve(def: FloorDefinition, envelope: AccessEnvelope,
 ## 시작점에서 각 셀까지의 경로 비용 (BFS). 유클리드 거리가 아니라 **실제 경로**를 본다 —
 ## 벽 하나 너머는 가까워 보여도 돌아가야 한다.
 static func _route_costs(def: FloorDefinition) -> Dictionary:
-	var costs := {}
 	if def.start_points.is_empty():
+		return {}
+	return _route_costs_from(def, def.start_points[0])
+
+
+## 주어진 시작점에서 각 셀까지의 경로 비용 (BFS).
+static func _route_costs_from(def: FloorDefinition, start: Vector2i) -> Dictionary:
+	var costs := {}
+	if not def.is_walkable(start):
 		return costs
-	var start: Vector2i = def.start_points[0]
 	costs[start] = 0
 	var queue: Array[Vector2i] = [start]
 	var head := 0

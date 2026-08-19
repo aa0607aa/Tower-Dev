@@ -93,6 +93,11 @@ func _add_walkable(cell: Vector2i) -> void:
 	_walkable[cell] = true
 
 
+## 로더 전용. 내부 구조물(기둥·칸막이)을 파낼 때 쓴다.
+func _remove_walkable(cell: Vector2i) -> void:
+	_walkable.erase(cell)
+
+
 func _finalize(p_bounds: Rect2i, p_hash: String) -> void:
 	bounds = p_bounds
 	definition_hash = p_hash

@@ -17,6 +17,7 @@ func run(t: TestCase) -> void:
 	_test_hash_ignores_formatting(t)
 	_test_connectivity(t, def)
 	_test_start_point_is_walkable(t, def)
+	_test_blocks_are_carved(t, def)
 
 
 func _test_identity(t: TestCase, def: FloorDefinition) -> void:
@@ -97,7 +98,8 @@ func _test_hash_ignores_formatting(t: TestCase) -> void:
 ## 2-2("시작점→계단 접근 불가 0건")의 전제다. 지형이 끊겨 있으면 계단을 어디에 두든 실패하고,
 ## 그때 원인이 계단 배치인지 지형인지 가려내기 어렵다. 여기서 먼저 잘라둔다.
 func _test_connectivity(t: TestCase, def: FloorDefinition) -> void:
-	t.assert_true(def.start_points.size() > 0, "시작점이 있어야 한다")
+	t.assert_true(def.start_points.size() >= 2,
+		"시작점 후보가 여러 개여야 한다 (D-022 — 회차마다 달라진다)")
 	var start: Vector2i = def.start_points[0]
 
 	var reached := {start: true}
@@ -124,4 +126,34 @@ func _test_connectivity(t: TestCase, def: FloorDefinition) -> void:
 
 func _test_start_point_is_walkable(t: TestCase, def: FloorDefinition) -> void:
 	for p in def.start_points:
-		t.assert_true(def.is_walkable(p), "시작점 %v 가 통행 가능해야 한다" % p)
+		t.assert_true(def.is_walkable(p), "시작점 후보 %v 가 통행 가능해야 한다" % p)
+
+	# D-022: 어느 후보에서 시작하든 맵 전체에 닿아야 한다.
+	# 하나라도 고립되면 그 회차는 시작하자마자 갇힌다.
+	for sp in def.start_points:
+		var reached := {sp: true}
+		var queue: Array[Vector2i] = [sp]
+		var head := 0
+		var dirs := [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
+		while head < queue.size():
+			var cur: Vector2i = queue[head]
+			head += 1
+			for d in dirs:
+				var nxt: Vector2i = cur + d
+				if reached.has(nxt) or not def.is_walkable(nxt):
+					continue
+				reached[nxt] = true
+				queue.append(nxt)
+		t.assert_eq(reached.size(), def.walkable_count(),
+			"시작점 후보 %v 에서 맵 전체에 도달할 수 있어야 한다 (D-022)" % sp)
+
+
+## 내부 구조물(blocks)이 실제로 파였는가. 안 파이면 "큰 방 하나"로 남는다.
+func _test_blocks_are_carved(t: TestCase, def: FloorDefinition) -> void:
+	# grand_hall 안에 넣은 기둥 자리가 통행 불가여야 한다
+	t.assert_true(not def.is_walkable(Vector2i(77, 52)),
+		"grand_hall 내부 기둥이 파여야 한다 (blocks)")
+	t.assert_true(not def.is_walkable(Vector2i(83, 58)),
+		"grand_hall 중앙 구조물이 파여야 한다")
+	# 기둥 옆은 여전히 통행 가능해야 한다 — 방을 통째로 막으면 안 된다
+	t.assert_true(def.is_walkable(Vector2i(74, 52)), "기둥 옆은 통행 가능")

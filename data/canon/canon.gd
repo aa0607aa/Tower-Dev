@@ -14,9 +14,13 @@ const FLOOR1_SUDDEN_DEATH_SECONDS: float = 3600.0
 ## D-005: 스탯은 힘·민첩·지능 3종. 인간 평균은 각 10.
 const HUMAN_AVERAGE_STAT: int = 10
 
-## D-005: 오르골(특수 개체) 초기 스탯 8/12/14.
+## D-021: 오르골(특수 개체) 초기 스탯 8/11/15. (합 34)
+##
+## ⚠ 설정서 v1.1 §24.1은 아직 8/12/14다. 오너가 소설 원문으로 배분을 정정했고
+## 우선순위 1(오너 직접 지시)이 설정서보다 앞선다. 다음 설정서 개정 때 반영한다.
+##
 ## 참고값일 뿐이며 랜덤 유배자 생성에 자동 적용하지 않는다. (D-002)
-const ORGEL_INITIAL_STATS := {"STR": 8, "AGI": 12, "INT": 14}
+const ORGEL_INITIAL_STATS := {"STR": 8, "AGI": 11, "INT": 15}
 
 ## 설정서 v1.1: 유배자 총 수명 100년.
 const EXILE_LIFESPAN_YEARS: int = 100
