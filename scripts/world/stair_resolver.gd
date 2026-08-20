@@ -12,6 +12,13 @@ extends RefCounted
 ##
 ## ## AI는 권한자가 아니라 보조자다 (`SYS-002` `SYS-007`)
 ## AI는 **엔진이 만든 합법 후보의 순위만** 매긴다. 좌표를 새로 만들거나 GameState에 쓰지 않는다.
+##
+## 이건 주석상의 약속이 아니라 **구조로 강제한다** (`P2-REV-005`):
+## AI에게는 원시값만 담은 **사본**(`_ai_projection`)을 넘긴다 — `WorldAnchor` 객체도,
+## 신뢰하는 후보 배열도 넘기지 않는다. GDScript의 배열·사전·객체는 참조이므로
+## 원본을 넘기면 어댑터가 `anchor`·`cost`를 직접 고칠 수 있다.
+## 반환값은 **아는 `candidate_id`에 대한 유한한 점수**만 받아들이고, 그 뒤에
+## 엔진이 원본 후보를 **다시 Hard Constraint로 검증**한다.
 ## AI가 없거나 실패하면 엔진 점수만으로 끝까지 진행한다 — 계단이 안 생기면 게임이 멈추므로
 ## AI를 필수 의존성으로 만들 수 없다. PHASE 2는 no-op 어댑터를 쓰고 PHASE 9에서 붙인다.
 ##
@@ -30,6 +37,10 @@ const MIN_ROUTE_RATIO := 0.55
 const TOP_BAND_RATIO := 0.20
 ## 밴드 최소 크기 — 너무 작으면 사실상 argmax가 된다.
 const MIN_BAND := 3
+## AI가 더할 수 있는 점수의 절대 상한 (`P2-REV-005`).
+## 엔진 점수는 대략 0~1.25 범위이므로 이 값이면 순위를 바꿀 수는 있어도
+## 한 후보를 독점적으로 고정하지는 못한다.
+const MAX_AI_SCORE_DELTA := 0.5
 
 
 ## 후보 순위를 매기는 선택적 보조자. PHASE 9에서 AI 어댑터가 이 자리에 들어온다.
@@ -68,14 +79,18 @@ func resolve_from(def: FloorDefinition, envelope: AccessEnvelope,
 		c["score"] = _engine_score(c, route)
 
 	# 선택적 AI ranking. 실패하거나 없으면 건너뛴다 (`SYS-007`).
-	if ai_ranker != null and ai_ranker.has_method("rank"):
-		var ranks: Variant = ai_ranker.call("rank", candidates)
-		if typeof(ranks) == TYPE_DICTIONARY:
-			for c in candidates:
-				var key: String = (c["anchor"] as WorldAnchor).key()
-				if (ranks as Dictionary).has(key):
-					# AI 점수는 가산일 뿐 Hard Constraint를 뒤집지 못한다.
-					c["score"] = float(c["score"]) + float((ranks as Dictionary)[key])
+	_apply_ai_ranking(candidates)
+
+	# ★ AI 이후 **엔진이 원본 후보를 다시 검증한다** (`P2-REV-005`).
+	# AI에는 사본만 넘기므로 원본이 오염될 수 없지만, 신뢰 경계는 한 겹으로 두지 않는다.
+	# 여기서 후보가 사라지면 AI 경로에 문제가 있다는 뜻이므로 fallback으로 간다.
+	var revalidated := _apply_hard_constraints(def, envelope, candidates, route)
+	if revalidated.is_empty():
+		push_warning("AI ranking 이후 재검증에서 후보가 전부 탈락했다 — fallback")
+		revalidated = _fallback_candidates(def, route, envelope)
+		for c in revalidated:
+			c["score"] = _engine_score(c, route)
+	candidates = revalidated
 
 	# 점수 내림차순. 동점은 anchor 키로 갈라 **순서를 결정적으로** 만든다 (`SYS-003`).
 	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
@@ -132,6 +147,71 @@ static func _route_costs_from(def: FloorDefinition, start: Vector2i,
 			costs[nxt] = int(costs[cur]) + 1
 			queue.append(nxt)
 	return costs
+
+
+## AI에게 넘길 **읽기 전용 사본**을 만든다 (`P2-REV-005`).
+##
+## GDScript의 `Array`/`Dictionary`/객체는 **참조**다. 신뢰하는 후보 배열을 그대로 넘기면
+## PHASE 9에서 붙는 어댑터가 `anchor`·`cost`·`score`를 직접 고칠 수 있다.
+## 그래서 원시값만 담은 새 Dictionary를 만들어 넘긴다 — `WorldAnchor` 객체는 넘기지 않는다.
+##
+## AI는 `candidate_id`로만 후보를 가리킬 수 있다.
+static func _ai_projection(candidates: Array[Dictionary]) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for c in candidates:
+		var a := c["anchor"] as WorldAnchor
+		out.append({
+			"candidate_id": a.key(),
+			"cell_x": a.cell.x,
+			"cell_y": a.cell.y,
+			"space_id": String(c["space_id"]),
+			"kind": String(c["kind"]),
+			"cost": int(c["cost"]),
+			"engine_score": float(c["score"]),
+		})
+	return out
+
+
+## AI가 돌려준 점수를 검증해 반영한다. **뒤집을 수 없고 가산만 한다.**
+##
+## 막는 것:
+## - 사전형이 아닌 반환값 / 호출 실패
+## - 모르는 `candidate_id` (조용히 무시한다 — 새 좌표를 만들 수 없다)
+## - 숫자가 아니거나 `NaN`·`INF`인 점수
+## - 과도한 크기 — `MAX_AI_SCORE_DELTA`로 자른다. 자르지 않으면 큰 값 하나로
+##   상위 밴드를 사실상 고정할 수 있어 `D-016`의 "1등 고정 금지"가 무너진다.
+func _apply_ai_ranking(candidates: Array[Dictionary]) -> void:
+	if ai_ranker == null or not ai_ranker.has_method("rank"):
+		return
+
+	var ranks: Variant = ai_ranker.call("rank", _ai_projection(candidates))
+	if typeof(ranks) != TYPE_DICTIONARY:
+		push_warning("AI ranker가 Dictionary를 반환하지 않았다 — 엔진 점수만 사용")
+		return
+
+	var by_id := {}
+	for c in candidates:
+		by_id[(c["anchor"] as WorldAnchor).key()] = c
+
+	var rejected := 0
+	for key in (ranks as Dictionary):
+		if not by_id.has(key):
+			rejected += 1
+			continue
+		var raw: Variant = (ranks as Dictionary)[key]
+		if typeof(raw) != TYPE_FLOAT and typeof(raw) != TYPE_INT:
+			rejected += 1
+			continue
+		var delta := float(raw)
+		if is_nan(delta) or is_inf(delta):
+			rejected += 1
+			continue
+		delta = clampf(delta, -MAX_AI_SCORE_DELTA, MAX_AI_SCORE_DELTA)
+		var c: Dictionary = by_id[key]
+		c["score"] = float(c["score"]) + delta
+
+	if rejected > 0:
+		push_warning("AI ranking 항목 %d개를 거부했다 (모르는 ID·비정상 점수)" % rejected)
 
 
 ## 경로가 지날 수 있는 칸인가 — 지형과 **허용 영역을 모두** 본다.
