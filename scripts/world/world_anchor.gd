@@ -50,3 +50,22 @@ func with_cell(new_cell: Vector2i) -> WorldAnchor:
 
 func _to_string() -> String:
 	return "WorldAnchor(%s)" % key()
+
+
+## 저장 형식. `key()`는 사람이 읽는 용도이고 이건 **복원 가능한** 형태다.
+func to_save_dict() -> Dictionary:
+	return {
+		"world_id": String(world_id),
+		"region_id": String(region_id),
+		"cell": [cell.x, cell.y],
+		"layer": layer,
+	}
+
+
+static func from_save_dict(d: Dictionary) -> WorldAnchor:
+	var c: Array = d.get("cell", [0, 0])
+	return WorldAnchor.new(
+		StringName(d.get("world_id", "")),
+		StringName(d.get("region_id", "")),
+		Vector2i(int(c[0]), int(c[1])),
+		int(d.get("layer", 0)))

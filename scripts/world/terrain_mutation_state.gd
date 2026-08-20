@@ -62,3 +62,8 @@ func to_sorted_records() -> Array:
 	for k in keys:
 		out.append(_mutations[k])
 	return out
+
+
+## 저장 형식. `to_sorted_records()`가 이미 결정적 순서를 보장한다 (`SYS-003`).
+func to_save_dict() -> Dictionary:
+	return {"mutations": to_sorted_records()}
