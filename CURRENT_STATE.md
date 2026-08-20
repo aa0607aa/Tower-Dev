@@ -3,11 +3,11 @@
 > 새 세션은 이 파일로 "지금 어디까지 왔는지"를 복원한다.
 > 상세 시계열과 판단 근거는 `docs/log/2026-08.md`와 최신 보조 로그를 확인한다.
 
-## 현재 위치 — 2026-08-19
+## 현재 위치 — 2026-08-20
 
 - **PHASE 0**: 완료 (`VERIFIED`)
 - **PHASE 1 (이동/카메라)**: 완료 (`PLAYTESTED`)
-- **PHASE 2 (1층 공간/상태/계단/세이브)**: **구현 및 P2-REV 수정 완료, 최종 종료 검수/PLAYTEST 대기**
+- **PHASE 2 (1층 공간/상태/계단/세이브)**: **완료 (`PLAYTESTED`)** — 2026-08-20 종료
   - [x] `P2-T0` Canon 가드 테스트
   - [x] `P2-T1` 공간 데이터 타입 (`WorldAnchor`, `AccessEnvelope`, 공유 `TerrainMutationState`)
   - [x] `P2-T2` 1층 고정 greybox + loader
@@ -16,13 +16,37 @@
   - [x] `P2-T5` 계단 resolver
   - [x] `P2-T6` save/load + immutable definition hash
   - [x] `P2-T7` 자동 회귀/변이 검증
-  - [x] Claude가 GPT의 `P2-REV-001~003` 수정 반영 및 테스트 완료
-  - [ ] **GPT가 P2-REV 최종 diff 재검토**
-  - [ ] **오너가 layout v2 밀도·규모 최종 체감 판정**
-- **PHASE 3**: 위 두 항목을 닫은 뒤 진행. 함정 구현은 새 `FLR-028`을 반드시 적용.
+  - [x] `P2-REV-001~003` 수정 + GPT 재검토
+  - [x] `P2-REV-004~007` 수정 + `DOC-REV-001~003` 정리
+  - [x] **GPT 최종 재검토 통과** — 새 BLOCKER 없음
+  - [x] **오너 layout v2 재플레이 완료** (통로 폭 수정 후)
+- **PHASE 3 (상호작용·함정·파밍)**: **착수** — `docs/design/PHASE3_IMPLEMENTATION_HANDOFF.md`
+  - [x] `P3-T0` PHASE 전환/계약 정리
+  - [ ] `P3-T1` 상호작용 입력과 대상 선택
+  - [ ] `P3-T2` ItemInstance + 인벤토리 소유권 (**소유권 골격 선행 필요 — 아래 참조**)
+  - [ ] `P3-T3` 바닥 아이템 실체 + 줍기/버리기
+  - [ ] `P3-T4` 함정 trigger mechanism 계약
+  - [ ] `P3-T5` 실제 함정 동작 + 저장
+  - [ ] `P3-T6` 단서 표현 / 정보 비대칭
+  - [ ] `P3-T7` 종합 회귀 + 오너 PLAYTEST
+
+### PHASE 3 티켓 타당성 검토 (Claude, 2026-08-20)
+
+GPT 분해안을 현재 Godot 구조와 대조했다. **순서는 그대로 타당하다.** 다만 한 가지를 짚는다.
+
+- ⚠ **`RunState`·`WorldState` 컨테이너가 실제로 존재하지 않는다.** `TerrainMutationState`는
+  "`WorldState` 소유"라고 문서화돼 있지만 소유자가 없어 **테스트에서만 생성**되고
+  `main.gd`는 만들지도 않는다. 3계층 canon이 코드에는 아직 `FloorState` 한 층뿐이다.
+- 그래서 `P3-T2`의 "인벤토리를 `FloorState`에 두지 않는다"를 지키려면 **인벤토리가 살 자리를
+  먼저 만들어야** 한다. `P3-T2`를 두 단계로 나눈다:
+  - `P3-T2a` — `RunState`/`WorldState` 최소 소유권 골격 + 소유권 가드 테스트
+  - `P3-T2b` — `ItemInstance` + 인벤토리
+- `P3-T1`의 "미발견 정보 누출 금지"는 **함정 발견 상태가 아직 없어도** 검증 가능하다.
+  함정을 상호작용 후보에서 아예 제외하면 되고, 새 canon이 필요 없다.
+  발견 상태가 실제로 필요해지는 시점은 `P3-T6`이다.
 
 - **저장소**: `aa0607aa/Tower-Dev`, `main`
-- **현재 문서 동기화 기준 HEAD**: `7ebdb99dcc2bebf0be1754e1d6029c00f0145128` (D-024 + 원작 GAP 장부)
+- **현재 문서 동기화 기준 HEAD**: PHASE 2 종료 시점 `794d1f5` + PHASE 3 인계 병합
 - **엔진**: Godot `4.7.1-stable`
 - **Canon 색인**: **156개 ID / 15도메인 / 통합 포인터 3개**
 - **설정서 원본**: `docs/SETTING_BIBLE_v1.1.docx`
