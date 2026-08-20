@@ -42,20 +42,28 @@ func ensure_world(world_id: StringName) -> WorldState:
 	return worlds[world_id]
 
 
+## 읽기 전용 조회. **없는 유배자를 조회해도 만들지 않는다.**
+##
+## 전에는 여기서 빈 배열을 만들어 넣었다. 그러면 **인벤토리를 들여다보기만 해도
+## 세이브가 달라진다** — 실제로 "실패한 버리기가 상태를 바꾸면 안 된다" 테스트가 이걸 잡았다.
+## 조회가 상태를 바꾸면 저장 비교로 부작용을 검출할 수 없게 된다 (`SYS-003`).
 func inventory(exile_id: StringName) -> Array:
-	if not inventories.has(exile_id):
-		inventories[exile_id] = []
-	return inventories[exile_id]
+	return inventories.get(exile_id, [])
 
 
 ## 유배자가 물건을 든다. **용량 제한은 아직 없다** (`PHASE 6` TBD).
+## 실제로 넣을 때만 자리를 만든다.
 func add_to_inventory(exile_id: StringName, instance: ItemInstance) -> void:
-	inventory(exile_id).append(instance)
+	if not inventories.has(exile_id):
+		inventories[exile_id] = []
+	(inventories[exile_id] as Array).append(instance)
 
 
 ## 유배자가 물건을 내려놓는다. 없으면 `null`.
 func remove_from_inventory(exile_id: StringName, instance_id: StringName) -> ItemInstance:
-	var inv: Array = inventory(exile_id)
+	if not inventories.has(exile_id):
+		return null
+	var inv: Array = inventories[exile_id]
 	for i in inv.size():
 		if (inv[i] as ItemInstance).instance_id == instance_id:
 			var it: ItemInstance = inv[i]

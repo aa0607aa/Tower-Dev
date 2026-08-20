@@ -22,8 +22,17 @@ var _floor_def: FloorDefinition
 var _floor_state: FloorState
 var _floor_view: FloorView
 var _debug_overlay: DebugOverlay
+var _ground_view: GroundItemView
 ## 마지막으로 표시한 프롬프트. 매 프레임 Label을 건드리지 않으려고 들고 있는다.
 var _prompt_text := ""
+
+## 회차/월드 상태 (`WLD-003` 3계층). `FloorState`만 있던 시절과 달리
+## 인벤토리·바닥 물건이 살 자리가 생겼다 (`P3-T2a`).
+var _run: RunState
+var _world: WorldState
+
+## 이 유배자의 id. 랜덤 유배자 생성 규칙(`CHR-010`)은 TBD라 지금은 고정값이다.
+const EXILE_ID := &"player"
 
 
 func _ready() -> void:
@@ -44,8 +53,13 @@ func _ready() -> void:
 	# 지형과 별개 개념이므로 여기서 명시적으로 만들어 넘긴다.
 	_player.access_envelope = AccessService.envelope_from_floor(&"player", _floor_def)
 
+	# 회차 → 월드 → 층 (`WLD-003`). 인벤토리는 회차에, 바닥 물건은 월드에 붙는다.
+	_run = RunState.new(RUN_SEED)
+	_world = _run.ensure_world(_floor_def.world_id)
+
 	# 시작 위치는 회차마다 시드가 고른다 (`D-022`). 결과는 FloorState에 저장된다.
 	_floor_state = FloorPopulator.populate(_floor_def, RUN_SEED)
+	_world.put_floor(_floor_state)
 	var start := _floor_state.start_cell
 	_player.global_position = Vector2(start.x * CELL + CELL / 2.0, start.y * CELL + CELL / 2.0)
 
@@ -53,6 +67,9 @@ func _ready() -> void:
 	# **이번 회차의 실제 시작점**을 기준으로 계산해야 안티 스킵이 의미를 갖는다.
 	_floor_state.party_stairs.append(StairResolver.new().resolve_from(
 		_floor_def, _player.access_envelope, &"party_1", RUN_SEED, start))
+
+	# 파밍 결과를 바닥에 실체화한다 (`P3-T3`). 멱등하므로 로드 후 다시 불러도 복제되지 않는다.
+	var materialized := ItemService.materialize_floor_loot(_world, _floor_def, _floor_state)
 
 	var stair: WorldAnchor = _floor_state.party_stairs[0]["anchor"]
 
@@ -64,6 +81,14 @@ func _ready() -> void:
 		_floor_def.traps.size(), _floor_def.loot_points.size(),
 		_floor_def.spawn_points.size(), start, stair.key(),
 	])
+	GameLog.info("Main", "바닥 물건 %d개 실체화" % materialized)
+
+	# 바닥 물건 표시. **눈에 보이는 것만** 그린다 — 함정은 그리지 않는다 (`SYS-005`).
+	_ground_view = GroundItemView.new()
+	_ground_view.name = "GroundItems"
+	_ground_view.world = _world
+	add_child(_ground_view)
+	_ground_view.refresh()
 
 	# 개발용 오버레이 — 함정·파밍·계단 마커. 기본 꺼짐, F1로 토글.
 	# `SYS-005`(미발견 정보 누출 금지)를 정면으로 어기므로 배포 빌드에서는 켜지지 않는다.
@@ -74,7 +99,7 @@ func _ready() -> void:
 	_debug_overlay.state = _floor_state
 	add_child(_debug_overlay)
 
-	_status_label.text = "「탑」 1층 (greybox) — 공간 %d · 긴 축 %d타일 · 함정 %d · 파밍 %d\nWASD/방향키: 이동   E: 상호작용   F1: 함정·파밍·계단 표시   ESC: 종료" % [
+	_status_label.text = "「탑」 1층 (greybox) — 공간 %d · 긴 축 %d타일 · 함정 %d · 파밍 %d\nWASD/방향키: 이동   E: 줍기   Q: 버리기   F1: 개발용 표시   ESC: 종료" % [
 		_floor_def.spaces.size(), _floor_def.long_axis(),
 		_floor_def.traps.size(), _floor_def.loot_points.size(),
 	]
@@ -92,8 +117,12 @@ func _refresh_interaction_prompt() -> void:
 	if _floor_def == null or _floor_state == null:
 		return
 	var target := InteractionService.best(
-		_floor_def, _floor_state, _player.access_envelope, _player_cell())
+		_floor_def, _world, _player.access_envelope, _player_cell())
+	var carried := _run.inventory(EXILE_ID).size()
 	var text := "" if target.is_empty() else "[E] %s" % target["label"]
+	if carried > 0:
+		# 개수만 말한다. 무엇을 들고 있는지 표시하는 것은 인벤토리 UI(PHASE 3 후반)의 일이다.
+		text += ("   " if not text.is_empty() else "") + "소지품 %d   [Q] 버리기" % carried
 	if text != _prompt_text:
 		_prompt_text = text
 		_prompt_label.text = text
@@ -113,21 +142,42 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	if event.is_action_pressed("interact"):
 		_on_interact()
+		return
+
+	if event.is_action_pressed("drop_item"):
+		_on_drop()
 
 
-## `P3-T1`은 **대상 선택까지**다. 실제 줍기는 `P3-T3`에서 붙인다.
-## 지금 여기서 `take_loot()`를 부르면 소유권 구조(`P3-T2`) 없이 상태만 바꾸게 되고,
-## 버리기·층 이동에서 소유권이 꼬인다.
+## 줍기. 소유권 이동은 전부 `ItemService`가 하고 여기서는 입력만 잇는다.
 func _on_interact() -> void:
-	if _floor_def == null or _floor_state == null:
+	if _floor_def == null or _world == null:
 		return
 	var target := InteractionService.best(
-		_floor_def, _floor_state, _player.access_envelope, _player_cell())
+		_floor_def, _world, _player.access_envelope, _player_cell())
 	if target.is_empty():
-		GameLog.info("Main", "상호작용 대상 없음")
 		return
-	GameLog.info("Main", "상호작용 대상 선택 — %s `%s` @%v (P3-T3에서 실제 동작 연결)" % [
-		target["kind"], target["id"], target["cell"]])
+	if ItemService.pick_up(_run, _world, _floor_state, EXILE_ID, target["id"]):
+		GameLog.info("Main", "주움 — `%s`" % target["id"])
+		_ground_view.refresh()
+
+
+## 버리기. **선 것 자리에 놓인다** — 원래 파밍 지점으로 돌아가지 않는다 (`P3-T3`).
+##
+## 지금은 마지막에 주운 것을 버린다. 무엇을 버릴지 고르는 UI는 인벤토리 화면의 일이고,
+## 그건 `PHASE 6`(무게·장비)과 함께 다뤄야 형태가 정해진다.
+func _on_drop() -> void:
+	if _run == null or _world == null:
+		return
+	var inv: Array = _run.inventory(EXILE_ID)
+	if inv.is_empty():
+		return
+	var last: ItemInstance = inv[inv.size() - 1]
+	var at := WorldAnchor.new(
+		_floor_def.world_id, _floor_def.world_region_ref, _player_cell(), 0)
+	if ItemService.drop(_run, _world, EXILE_ID, last.instance_id, at,
+			_player.access_envelope):
+		GameLog.info("Main", "버림 — `%s` @%v" % [last.instance_id, at.cell])
+		_ground_view.refresh()
 
 
 func _notification(what: int) -> void:

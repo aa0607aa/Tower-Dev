@@ -27,48 +27,45 @@ const REACH_CELLS := 1
 
 ## 후보 종류의 **고정 우선순위**. 거리가 같을 때 순서를 결정적으로 만든다 (`SYS-003`).
 ## 나중에 종류가 늘면 여기에 추가한다 — 배열 순서가 곧 우선순위다.
-const KIND_PRIORITY: Array[StringName] = [&"loot"]
+const KIND_PRIORITY: Array[StringName] = [&"item"]
 
 
 ## 지금 상호작용할 수 있는 것들. **가까운 순 → 종류 순 → id 순**으로 정렬된다.
 ##
 ## 반환 항목: `{ kind, id, cell, distance, label }`
-static func candidates(def: FloorDefinition, state: FloorState,
+static func candidates(def: FloorDefinition, world: WorldState,
 		envelope: AccessEnvelope, actor_cell: Vector2i) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	if def == null or state == null:
+	if def == null or world == null:
 		return out
 
-	for lp in def.loot_points:
-		var cell: Vector2i = lp["cell"]
-		var d := _reach_distance(actor_cell, cell)
-		if d > REACH_CELLS:
-			continue
-		var point_id: StringName = lp["id"]
-		if state.is_looted(point_id):
-			continue
-		# 행동 반경 밖에는 손이 닿지 않는다 (`D-017` 4항 · `FLR-024`).
-		# 유배자가 원인인 직접 영향은 경계를 넘지 못한다.
-		if envelope != null and not envelope.contains(
-				WorldAnchor.new(def.world_id, def.world_region_ref, cell, 0)):
-			continue
-		out.append({
-			"kind": &"loot",
-			"id": point_id,
-			"cell": cell,
-			"distance": d,
-			# 내용물을 말하지 않는다 — 행동만 말한다.
-			"label": "줍기",
-		})
+	# 파밍 **지점**이 아니라 바닥에 **실제로 있는 물건**을 본다 (`P3-T3`).
+	# 지점을 보면 유배자가 다른 곳에 버린 물건을 주울 수 없다.
+	for r in range(-REACH_CELLS, REACH_CELLS + 1):
+		for c in range(-REACH_CELLS, REACH_CELLS + 1):
+			var cell := actor_cell + Vector2i(c, r)
+			# 행동 반경 밖에는 손이 닿지 않는다 (`D-017` 4항 · `FLR-024`).
+			if envelope != null and not envelope.contains(
+					WorldAnchor.new(def.world_id, def.world_region_ref, cell, 0)):
+				continue
+			for instance_id in world.ground_items_at(cell):
+				out.append({
+					"kind": &"item",
+					"id": instance_id,
+					"cell": cell,
+					"distance": _reach_distance(actor_cell, cell),
+					# 내용물을 말하지 않는다 — 행동만 말한다.
+					"label": "줍기",
+				})
 
 	out.sort_custom(_compare)
 	return out
 
 
 ## 지금 `interact` 키를 누르면 실행될 **단 하나**의 대상. 없으면 빈 사전.
-static func best(def: FloorDefinition, state: FloorState,
+static func best(def: FloorDefinition, world: WorldState,
 		envelope: AccessEnvelope, actor_cell: Vector2i) -> Dictionary:
-	var list := candidates(def, state, envelope, actor_cell)
+	var list := candidates(def, world, envelope, actor_cell)
 	return list[0] if not list.is_empty() else {}
 
 
