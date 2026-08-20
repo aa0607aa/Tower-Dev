@@ -22,13 +22,22 @@
   - [x] **오너 layout v2 재플레이 완료** (통로 폭 수정 후)
 - **PHASE 3 (상호작용·함정·파밍)**: **착수** — `docs/design/PHASE3_IMPLEMENTATION_HANDOFF.md`
   - [x] `P3-T0` PHASE 전환/계약 정리
-  - [ ] `P3-T1` 상호작용 입력과 대상 선택
-  - [ ] `P3-T2` ItemInstance + 인벤토리 소유권 (**소유권 골격 선행 필요 — 아래 참조**)
-  - [ ] `P3-T3` 바닥 아이템 실체 + 줍기/버리기
-  - [ ] `P3-T4` 함정 trigger mechanism 계약
-  - [ ] `P3-T5` 실제 함정 동작 + 저장
-  - [ ] `P3-T6` 단서 표현 / 정보 비대칭
-  - [ ] `P3-T7` 종합 회귀 + 오너 PLAYTEST
+  - [x] `P3-T1` 상호작용 입력과 대상 선택 (`InteractionService`, `E`/`Enter`)
+  - [x] `P3-T2a` `RunState`/`WorldState` 소유권 골격 + 가드 테스트
+  - [x] `P3-T2b` `ItemInstance` + 인벤토리
+  - [x] `P3-T3` 바닥 아이템 실체 + 줍기/버리기 + `RunSave` 왕복
+  - [x] `P3-T4` 함정 trigger mechanism 계약 (`TrapStimulus`/`TrapRuntime`)
+  - [x] `P3-T5` 실제 함정 발동 + 저장 + 비플레이어 자극 검증
+  - [x] `P3-T6` 단서 표현 (`ClueView`) / 정보 비대칭
+  - [x] `P3-T7` 종합 회귀 (자동)
+  - [ ] **`P3-T7` 오너 PLAYTEST** — `3-4` F1 없이 치명 함정 단서 인지 가능한지
+
+### PHASE 3 자동 검증 결과 (2026-08-20)
+
+- 단위 **929 단언** · 통합 **25 단언**, 실패 0 (PHASE 2 종료 시점 688/25 → **929/25**)
+- 새 테스트 파일 5개 — 소유권 / 상호작용 / 아이템 왕복 / 함정 / 정보 비대칭
+- **변이 검증 3건** — 함정을 actor class 전용으로 / 단서를 함정 칸에 정확히 표시 /
+  인벤토리를 `FloorState`로 이동. 전부 해당 테스트가 잡았다
 
 ### PHASE 3 티켓 타당성 검토 (Claude, 2026-08-20)
 

@@ -118,7 +118,28 @@ harness 두 개 모두 **발견/실행/집계/종료 코드만** 담당한다 (`
 | 2-4 | 계단이 `party_stairs[]` 구조로 저장된다 (단일 stair_id 아님) | VERIFIED | ✅ 파티 3개 독립 + 저장 형식 |
 | 2-5 | 1층 코드에 프로시저럴 **지형** 생성기가 없다 | VERIFIED | ✅ 가드 + 로더가 시드를 받지 않음 |
 | 3-1 | **함정 단서 강제**: 치명 함정의 `clues[]`가 비면 실패 | VERIFIED | ✅ (PHASE 3 항목이나 P2-T3에서 선행 확보) |
+| 3-2 | 줍기/버리기/재로드 결과 일관 (같은 instance·소유권) | VERIFIED | ✅ `test_item_roundtrip.gd` — 줍기→저장→로드→버리기→저장→로드→다시줍기 |
+| 3-3 | 발사형 함정 1회성 + `fired` 저장, 재로드 후 재충전 없음 | VERIFIED | ✅ `test_traps.gd` |
+| 3-5 | **비플레이어 물리 자극으로도 함정 발동** (`FLR-028`) | VERIFIED | ✅ 던진 돌이 wall_bolt 발동 + 그 뒤 통과 가능 |
+| 3-6 | 미발견 함정 정보가 표현 계층으로 누출되지 않음 | VERIFIED | ✅ `test_information_asymmetry.gd` |
+| 3-7 | 유배자 인과 자극이 행동 반경을 넘지 않음 | VERIFIED | ✅ 던진 물체는 경계 밖 함정을 못 건드린다 |
+| 3-4 | 함정 단서를 **플레이 화면에서** 인지 가능 | **PLAYTESTED 필요** | ⏳ 오너 — F1 없이 치명 함정 전에 의심할 수 있는가 |
 
+> **PHASE 3 자동 검증 (2026-08-20).** 단위 **929단언** + 통합 **25단언**, 실패 0.
+> `3-4` 오너 PLAYTEST만 남았다.
+>
+> ### `P3-T1`~`P3-T7`에서 늘어난 회귀 테스트
+>
+> | 파일 | 지키는 것 |
+> |---|---|
+> | `test_ownership.gd` | `RunState → WorldState → FloorState` 경계. 인벤토리가 층에 붙으면 실패 |
+> | `test_interaction.gd` | 대상 선택 결정성 + 함정이 프롬프트로 새지 않음 |
+> | `test_item_roundtrip.gd` | 줍기/버리기 왕복에서 instance 보존, 복제·소실 금지 |
+> | `test_traps.gd` | `FLR-028` 비플레이어 자극 발동 + `FLR-012` 1회성 + actor class 금지 |
+> | `test_information_asymmetry.gd` | 단서가 정답 표시가 되지 않음, 표현 계층 누출 금지 |
+>
+> ---
+>
 > **PHASE 2 완료 — `PLAYTESTED` (2026-08-20).** 단위 **688단언** + 통합 **25단언**, 실패 0.
 > `2-6` 오너 greybox PLAYTEST 완료 — 구역별 성격 분화(layout v2)와 통로 폭 수정본을 모두 재플레이했다.
 > GPT 최종 독립 재검토에서 새 BLOCKER 없음.

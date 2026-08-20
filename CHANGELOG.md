@@ -6,6 +6,21 @@
 
 ### Added
 
+- **PHASE 3 — 상호작용·함정·파밍 (자동 검증 완료, 오너 PLAYTEST 대기).**
+  - `scripts/world/run_state.gd` · `world_state.gd` — `RunState → WorldState → FloorState`
+    3계층을 **코드로** 만들었다. 전에는 `FloorState`만 있었고 "`WorldState` 소유"라고
+    적힌 `TerrainMutationState`는 소유자가 없었다.
+  - `scripts/items/item_instance.gd` · `item_service.gd` — 개체 단위 물건과 소유권 이동.
+    파밍 지점의 추첨 결과와 "그 물건이 지금 어디 있나"를 분리했다.
+  - `scripts/interaction/interaction_service.gd` — 상호작용 대상 선택. 결정적 우선순위.
+  - `scripts/traps/trap_stimulus.gd` · `trap_runtime.gd` — 함정을 **자극 기반**으로 판정.
+    `body is Player` 금지 (`FLR-028`).
+  - `scripts/world/ground_item_view.gd` · `clue_view.gd` — 배포 가능한 표현 계층.
+  - `scripts/save/run_save.gd` — 회차 전체 저장/복원.
+  - `project.godot` — `interact`(E/Enter) · `drop_item`(Q).
+  - 저작 데이터에 함정 `accepts`/`min_mass` 추가. **DESIGN이며 canon 아님.**
+
+
 - **PHASE 2 — 1층 공간/상태/계단/세이브 (완료, `PLAYTESTED` 2026-08-20).**
   - `P2-T0`~`P2-T7` 전 항목 + GPT 독립 검수 2회(`P2-REV-001~003`, `P2-REV-004~007`).
   - 오너가 통로 폭 수정 후 layout v2를 재플레이해 체감 판정까지 종료.
