@@ -39,6 +39,69 @@ static func can_effect_reach(envelope: AccessEnvelope, source: CausalSource,
 	return envelope.can_cross(source, anchor_at(envelope, world_position, layer))
 
 
+## 물리 이동 **전에** 속도를 잘라 경계 밖 motion 자체를 막는다 (`P2-REV-006`).
+##
+## ## 왜 `clamp_move()`만으로는 부족한가
+## `clamp_move()`는 `move_and_slide()`가 **이미 물리 이동과 충돌 질의를 끝낸 뒤**
+## 최종 좌표만 경계 안으로 되감는다. 좌표는 돌아오지만 그 프레임에 CharacterBody가
+## 경계 밖에서 실제로 움직였고 충돌을 만들었다.
+##
+## PHASE 2 회색박스에는 경계 밖에 아무것도 없어 티가 안 났지만, PHASE 3에서 함정·물체·
+## `Area2D`가 붙으면 **경계 밖 대상을 건드리고 나서 좌표만 되돌리는** 상태가 된다.
+## `D-017`/`FLR-024`상 유배자가 원인이 된 직접 영향은 경계 밖에 닿을 수 없다.
+##
+## ## 축별로 자른다
+## 성분을 통째로 0으로 만들면 경계를 따라 미끄러지지 못하고 벽에 붙어 멈춘다.
+## 대각선이 막히면 x만/y만 남겨 보고, 둘 다 안 되면 그때 멈춘다.
+##
+## ## NPC·야생동물은 대상이 아니다
+## `envelope`이 없는 개체는 그대로 통과한다. 경계는 **유배자에게 걸린 인과 제약**이지
+## 월드의 물리 벽이 아니다 (`FLR-023`).
+static func limit_motion(envelope: AccessEnvelope, from: Vector2, velocity: Vector2,
+		delta: float, half_extent: Vector2 = Vector2.ZERO, layer: int = 0) -> Vector2:
+	if envelope == null or velocity == Vector2.ZERO or delta <= 0.0:
+		return velocity
+
+	var target := from + velocity * delta
+	if can_body_occupy(envelope, target, half_extent, layer):
+		return velocity
+
+	# 대각선이 막혔다면 한 축만 살려본다 — 경계를 따라 미끄러지는 이동은 살린다.
+	if can_body_occupy(envelope, Vector2(target.x, from.y), half_extent, layer):
+		return Vector2(velocity.x, 0.0)
+	if can_body_occupy(envelope, Vector2(from.x, target.y), half_extent, layer):
+		return Vector2(0.0, velocity.y)
+	return Vector2.ZERO
+
+
+## 몸체 **전체**가 경계 안에 들어가는가.
+##
+## `can_body_enter()`는 중심점의 셀만 본다. 몸체는 크기가 있으므로 중심이 마지막 허용 셀에
+## 있어도 옆면이 경계를 넘는다. 실제로 `P2-REV-006` E2E에서 경계 밖 `Area2D`에 몸이 닿았다 —
+## 중심은 안에 있었는데도. 물리적 접촉을 막는 것이 목적이므로 **AABB가 덮는 모든 셀**을 본다.
+##
+## `half_extent`가 0이면 중심점 판정과 같다.
+static func can_body_occupy(envelope: AccessEnvelope, center: Vector2,
+		half_extent: Vector2 = Vector2.ZERO, layer: int = 0) -> bool:
+	if half_extent == Vector2.ZERO:
+		return can_body_enter(envelope, center, layer)
+
+	# 경계면에 정확히 맞닿는 경우를 밖으로 세지 않도록 아주 살짝 안쪽을 본다.
+	var eps := 0.001
+	var min_c := Vector2i(
+		floori((center.x - half_extent.x + eps) / CELL),
+		floori((center.y - half_extent.y + eps) / CELL))
+	var max_c := Vector2i(
+		floori((center.x + half_extent.x - eps) / CELL),
+		floori((center.y + half_extent.y - eps) / CELL))
+	for cy in range(min_c.y, max_c.y + 1):
+		for cx in range(min_c.x, max_c.x + 1):
+			if not envelope.can_owner_enter(
+					WorldAnchor.new(envelope.world_id, envelope.region_id, Vector2i(cx, cy), layer)):
+				return false
+	return true
+
+
 ## 이동을 경계 안으로 자른다.
 ##
 ## 막힌 축만 되돌린다 — 벡터 전체를 버리면 경계를 따라 미끄러지지 못해

@@ -27,6 +27,10 @@ const BASE_SPEED := 160.0
 
 @onready var _debug_label: Label = $DebugLabel
 
+## 충돌 상자의 반크기. 경계 판정은 중심점이 아니라 **몸 전체**를 봐야 한다 (`P2-REV-006`).
+## 중심이 마지막 허용 셀에 있어도 옆면이 경계를 넘으면 밖의 물체에 닿는다.
+var _half_extent := Vector2.ZERO
+
 ## 이 유배자의 행동 반경 (`FLR-017` `FLR-024`). 없으면 경계 없이 움직인다.
 ##
 ## 지형 충돌과 **별개**다 — 지형은 물리 벽이고 이것은 탑의 인과 제약이다.
@@ -34,19 +38,34 @@ const BASE_SPEED := 160.0
 var access_envelope: AccessEnvelope = null
 
 
-func _physics_process(_delta: float) -> void:
+func _ready() -> void:
+	var shape_node := get_node_or_null("Collision") as CollisionShape2D
+	if shape_node != null and shape_node.shape is RectangleShape2D:
+		_half_extent = (shape_node.shape as RectangleShape2D).size * 0.5
+
+
+func _physics_process(delta: float) -> void:
 	var raw := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	velocity = Movement.desired_velocity(raw, BASE_SPEED)
 
 	var before := global_position
 
+	# ★ 행동 반경은 **물리 이동 전에** 건다 (`P2-REV-006`).
+	#
+	# 전에는 `move_and_slide()`를 먼저 돌리고 결과 좌표만 경계 안으로 되감았다.
+	# 좌표는 돌아왔지만 그 프레임에 몸체가 경계 밖에서 실제로 움직였고 충돌을 만들었다.
+	# PHASE 3에서 함정·물체·Area가 붙으면 **경계 밖 대상을 건드리고 나서 좌표만 되돌리는**
+	# 상태가 된다. `D-017`/`FLR-024`상 유배자가 원인인 직접 영향은 경계 밖에 닿을 수 없다.
+	if access_envelope != null:
+		velocity = AccessService.limit_motion(
+			access_envelope, before, velocity, delta, _half_extent)
+
 	# move_and_slide()는 velocity를 픽셀/초로 해석하고 delta를 내부에서 곱한다.
 	# 그래서 여기서 delta를 다시 곱하면 안 된다 — 곱하면 프레임률에 따라 속도가 흔들린다.
 	move_and_slide()
 
-	# 지형 충돌을 통과한 뒤 행동 반경으로 한 번 더 자른다.
-	# 순서가 중요하다 — 물리를 먼저 돌려야 벽 미끄러짐이 살아 있고,
-	# 그 결과를 경계로 자르면 두 제약이 모두 지켜진다.
+	# 안전망. 위에서 이미 막았지만 지형 충돌의 미끄러짐이 예상 밖 좌표를 만들 수 있다.
+	# 경계는 한 겹으로 두지 않는다.
 	if access_envelope != null:
 		global_position = AccessService.clamp_move(access_envelope, before, global_position)
 
