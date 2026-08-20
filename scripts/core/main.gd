@@ -15,12 +15,15 @@ const CELL := 32  # Canon.TILE_SIZE
 const RUN_SEED := 20260819
 
 @onready var _status_label: Label = $UI/StatusLabel
+@onready var _prompt_label: Label = $UI/InteractionPrompt
 @onready var _player: CharacterBody2D = $Player
 
 var _floor_def: FloorDefinition
 var _floor_state: FloorState
 var _floor_view: FloorView
 var _debug_overlay: DebugOverlay
+## 마지막으로 표시한 프롬프트. 매 프레임 Label을 건드리지 않으려고 들고 있는다.
+var _prompt_text := ""
 
 
 func _ready() -> void:
@@ -71,16 +74,60 @@ func _ready() -> void:
 	_debug_overlay.state = _floor_state
 	add_child(_debug_overlay)
 
-	_status_label.text = "「탑」 1층 (greybox) — 공간 %d · 긴 축 %d타일 · 함정 %d · 파밍 %d\nWASD/방향키: 이동   F1: 함정·파밍·계단 표시   ESC: 종료" % [
+	_status_label.text = "「탑」 1층 (greybox) — 공간 %d · 긴 축 %d타일 · 함정 %d · 파밍 %d\nWASD/방향키: 이동   E: 상호작용   F1: 함정·파밍·계단 표시   ESC: 종료" % [
 		_floor_def.spaces.size(), _floor_def.long_axis(),
 		_floor_def.traps.size(), _floor_def.loot_points.size(),
 	]
+
+
+func _process(_delta: float) -> void:
+	_refresh_interaction_prompt()
+
+
+## 지금 상호작용할 수 있는 것을 화면에 알린다.
+##
+## **발견된 정보 범위 안에서만** 말한다 — 함정은 후보에 아예 들어오지 않고,
+## 라벨은 아이템 내용물도 말하지 않는다 (`SYS-005` · `InteractionService` 주석 참조).
+func _refresh_interaction_prompt() -> void:
+	if _floor_def == null or _floor_state == null:
+		return
+	var target := InteractionService.best(
+		_floor_def, _floor_state, _player.access_envelope, _player_cell())
+	var text := "" if target.is_empty() else "[E] %s" % target["label"]
+	if text != _prompt_text:
+		_prompt_text = text
+		_prompt_label.text = text
+
+
+func _player_cell() -> Vector2i:
+	return Vector2i(
+		floori(_player.global_position.x / CELL),
+		floori(_player.global_position.y / CELL))
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		GameLog.info("Main", "ESC 입력 — 정상 종료 요청")
 		get_tree().quit()
+		return
+
+	if event.is_action_pressed("interact"):
+		_on_interact()
+
+
+## `P3-T1`은 **대상 선택까지**다. 실제 줍기는 `P3-T3`에서 붙인다.
+## 지금 여기서 `take_loot()`를 부르면 소유권 구조(`P3-T2`) 없이 상태만 바꾸게 되고,
+## 버리기·층 이동에서 소유권이 꼬인다.
+func _on_interact() -> void:
+	if _floor_def == null or _floor_state == null:
+		return
+	var target := InteractionService.best(
+		_floor_def, _floor_state, _player.access_envelope, _player_cell())
+	if target.is_empty():
+		GameLog.info("Main", "상호작용 대상 없음")
+		return
+	GameLog.info("Main", "상호작용 대상 선택 — %s `%s` @%v (P3-T3에서 실제 동작 연결)" % [
+		target["kind"], target["id"], target["cell"]])
 
 
 func _notification(what: int) -> void:
