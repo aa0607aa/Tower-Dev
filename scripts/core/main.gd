@@ -23,6 +23,7 @@ var _floor_state: FloorState
 var _floor_view: FloorView
 var _debug_overlay: DebugOverlay
 var _ground_view: GroundItemView
+var _clue_view: ClueView
 ## 마지막으로 표시한 프롬프트. 매 프레임 Label을 건드리지 않으려고 들고 있는다.
 var _prompt_text := ""
 ## 함정 발동 알림. 발동했다는 사실은 숨기지 않는다 — 이미 겪은 일이다 (`SYS-005`).
@@ -93,6 +94,15 @@ func _ready() -> void:
 	])
 	GameLog.info("Main", "바닥 물건 %d개 실체화" % materialized)
 
+	# 함정 단서 흔적 (`P3-T6`). 함정 칸을 찍어주는 것이 아니라 **주변 흔적**만 그린다 —
+	# 정확히 찍으면 단서가 아니라 정답이 된다 (`FLR-011` `SYS-005`).
+	_clue_view = ClueView.new()
+	_clue_view.name = "Clues"
+	_clue_view.definition = _floor_def
+	_clue_view.state = _floor_state
+	add_child(_clue_view)
+	_clue_view.refresh()
+
 	# 바닥 물건 표시. **눈에 보이는 것만** 그린다 — 함정은 그리지 않는다 (`SYS-005`).
 	_ground_view = GroundItemView.new()
 	_ground_view.name = "GroundItems"
@@ -141,6 +151,8 @@ func _check_trap_underfoot() -> void:
 		GameLog.info("Main", "함정 발동 — `%s` @%v" % [trap_id, cell])
 		_fired_notice = "함정이 작동했다"
 		_fired_notice_until = Time.get_ticks_msec() + 2500
+		# 터진 함정의 흔적은 지운다 — 위험이 사라졌다.
+		_clue_view.refresh()
 
 
 ## 지금 상호작용할 수 있는 것을 화면에 알린다.
