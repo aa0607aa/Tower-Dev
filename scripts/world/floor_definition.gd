@@ -43,7 +43,10 @@ var start_points: Array[Vector2i] = []
 
 ## 함정의 **고정** 정의 (`FLR-001` · `D-012` 2026-08-18 정정).
 ## 위치·종류·구조·사전 단서까지 전부 고정이다. `armed`/`fired` 같은 상태는 `FloorState`에 있다.
-## { id, cell, type, lethal, one_shot, clues[] }
+## { id, cell, type, lethal, one_shot, clues[], accepts[], min_mass }
+##
+## `accepts`/`min_mass`는 발동 메커니즘이다 (`P3-T4` · `FLR-028`).
+## **DESIGN이며 canon 아니다** — 어떤 센서가 존재하는지는 원문에 없다.
 var traps: Array[Dictionary] = []
 
 ## 파밍/스폰 **지점**. 좌표만 고정이고 내용물은 시드가 정한다 (`FLR-002`).

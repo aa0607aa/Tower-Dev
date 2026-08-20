@@ -25,6 +25,9 @@ var _debug_overlay: DebugOverlay
 var _ground_view: GroundItemView
 ## 마지막으로 표시한 프롬프트. 매 프레임 Label을 건드리지 않으려고 들고 있는다.
 var _prompt_text := ""
+## 함정 발동 알림. 발동했다는 사실은 숨기지 않는다 — 이미 겪은 일이다 (`SYS-005`).
+var _fired_notice := ""
+var _fired_notice_until := 0
 
 ## 회차/월드 상태 (`WLD-003` 3계층). `FloorState`만 있던 시절과 달리
 ## 인벤토리·바닥 물건이 살 자리가 생겼다 (`P3-T2a`).
@@ -33,6 +36,13 @@ var _world: WorldState
 
 ## 이 유배자의 id. 랜덤 유배자 생성 규칙(`CHR-010`)은 TBD라 지금은 고정값이다.
 const EXILE_ID := &"player"
+
+## 유배자 체중(kg). **DESIGN이며 canon 아님** — 무게/운반 공식은 `PHASE 6` TBD다.
+## 함정 압력 판정에 필요한 최소 표현이라 여기 둔다.
+const EXILE_MASS := 70.0
+
+## 마지막으로 함정을 판정한 칸. 같은 칸에서 매 프레임 다시 판정하지 않는다.
+var _last_trap_cell := Vector2i(-9999, -9999)
 
 
 func _ready() -> void:
@@ -107,6 +117,30 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	_refresh_interaction_prompt()
+	_check_trap_underfoot()
+
+
+## 유배자가 밟은 칸의 함정을 판정한다.
+##
+## **`body is Player` 같은 조건을 쓰지 않는다** (`FLR-028`). 밟았다는 사실을
+## `TrapStimulus`(압력 + 체중)로 바꿔 넘길 뿐이고, 판정은 `TrapRuntime`이 데이터로 한다.
+## 던진 돌·NPC도 같은 경로를 쓴다 — 그래야 원작의 "돌로 먼저 터뜨리기"가 성립한다.
+func _check_trap_underfoot() -> void:
+	if _floor_def == null or _floor_state == null:
+		return
+	var cell := _player_cell()
+	if cell == _last_trap_cell:
+		return
+	_last_trap_cell = cell
+
+	var stimulus := TrapStimulus.from_body(cell, EXILE_MASS, EXILE_ID)
+	var fired := TrapRuntime.apply(
+		_floor_def, _floor_state, stimulus, _player.access_envelope)
+	for trap_id in fired:
+		# 피해·부상은 `PHASE 4`/`PHASE 6`이다. 지금은 발동 사실만 알린다.
+		GameLog.info("Main", "함정 발동 — `%s` @%v" % [trap_id, cell])
+		_fired_notice = "함정이 작동했다"
+		_fired_notice_until = Time.get_ticks_msec() + 2500
 
 
 ## 지금 상호작용할 수 있는 것을 화면에 알린다.
@@ -119,7 +153,14 @@ func _refresh_interaction_prompt() -> void:
 	var target := InteractionService.best(
 		_floor_def, _world, _player.access_envelope, _player_cell())
 	var carried := _run.inventory(EXILE_ID).size()
-	var text := "" if target.is_empty() else "[E] %s" % target["label"]
+	var text := ""
+	if not _fired_notice.is_empty():
+		if Time.get_ticks_msec() < _fired_notice_until:
+			text = _fired_notice
+		else:
+			_fired_notice = ""
+	if text.is_empty() and not target.is_empty():
+		text = "[E] %s" % target["label"]
 	if carried > 0:
 		# 개수만 말한다. 무엇을 들고 있는지 표시하는 것은 인벤토리 UI(PHASE 3 후반)의 일이다.
 		text += ("   " if not text.is_empty() else "") + "소지품 %d   [Q] 버리기" % carried

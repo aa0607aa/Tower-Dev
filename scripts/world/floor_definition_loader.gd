@@ -116,6 +116,15 @@ static func build(src: Dictionary) -> FloorDefinition:
 		var clues: Array[String] = []
 		for c in tr.get("clues", []):
 			clues.append(String(c))
+		# 발동 메커니즘 (`P3-T4` · `FLR-028`). **DESIGN이며 canon 아니다** —
+		# 어떤 센서가 존재하는지는 원문에 없다. 저작 데이터가 선언한 대로 따를 뿐이다.
+		# 정렬해서 담는다: 서술 순서가 해시를 흔들면 안 된다 (`SYS-003`).
+		var accepts: Array[String] = []
+		for a in tr.get("accepts", TrapRuntime.DEFAULT_ACCEPTS):
+			accepts.append(String(a))
+		accepts.sort()
+		var min_mass := float(tr.get("min_mass", 0.0))
+
 		def.traps.append({
 			"id": StringName(tr["id"]),
 			"cell": cell,
@@ -123,13 +132,17 @@ static func build(src: Dictionary) -> FloorDefinition:
 			"lethal": bool(tr.get("lethal", false)),
 			"one_shot": bool(tr.get("one_shot", false)),
 			"clues": clues,
+			"accepts": accepts,
+			"min_mass": min_mass,
 		})
 		# 치명 여부·일회성·단서까지 넣는다 — 위치가 같아도 이것들이 바뀌면 다른 함정이다.
-		hash_parts.append("trap|%s|%d,%d|%s|%s|%s|%s" % [
+		# 메커니즘도 불변 정의다 (`P2-REV-003`) — 무엇이 함정을 발동시키는지가 바뀌면
+		# 같은 세이브가 다른 게임이 된다.
+		hash_parts.append("trap|%s|%d,%d|%s|%s|%s|%s|%s|%.3f" % [
 			tr["id"], cell.x, cell.y, tr["type"],
 			"L" if bool(tr.get("lethal", false)) else "-",
 			"O" if bool(tr.get("one_shot", false)) else "-",
-			"/".join(clues)])
+			"/".join(clues), ",".join(accepts), min_mass])
 
 	for lp in src.get("loot_points", []):
 		var lc := Vector2i(int(lp["cell"][0]), int(lp["cell"][1]))
