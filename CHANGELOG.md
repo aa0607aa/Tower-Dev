@@ -6,7 +6,10 @@
 
 ### Added
 
-- **PHASE 3 — 상호작용·함정·파밍 (자동 검증 완료, 오너 PLAYTEST 대기).**
+- **PHASE 3 — 상호작용·함정·파밍 (완료, `PLAYTESTED` 2026-08-20).**
+  - 오너 판정: F1 없이 플레이해 함정 단서가 "잘 보인다". `FLR-011` 요건 충족.
+  - 단서 밀도·진하기 조정은 도트 맵 완성 후(`PHASE 8`)로 보류.
+  - 최종 자동 검증 **단위 929 단언 + 통합 25 단언**, 변이 검증 3건.
   - `scripts/world/run_state.gd` · `world_state.gd` — `RunState → WorldState → FloorState`
     3계층을 **코드로** 만들었다. 전에는 `FloorState`만 있었고 "`WorldState` 소유"라고
     적힌 `TerrainMutationState`는 소유자가 없었다.
