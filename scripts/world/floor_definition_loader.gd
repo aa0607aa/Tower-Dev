@@ -73,7 +73,16 @@ static func build(src: Dictionary) -> FloorDefinition:
 			var tags: Array = entry.get("tags", [])
 			def.spaces.append({"id": id, "rect": rect, "tags": tags, "kind": kind.trim_suffix("s")})
 			_fill_rect(def, rect)
-			hash_parts.append("%s|%s|%d,%d,%d,%d" % [kind, id, rect.position.x, rect.position.y, rect.size.x, rect.size.y])
+			# 태그도 불변 정의다 (`P2-REV-007`). `landmark` 같은 의미 태그는 앞으로
+			# 계단 POI·인카운터 판단에 쓰이므로, 좌표가 같아도 태그가 바뀌면 다른 정의다.
+			# 서술 순서에 흔들리지 않도록 정렬한다 (`SYS-003`).
+			var sorted_tags: Array[String] = []
+			for tag in tags:
+				sorted_tags.append(String(tag))
+			sorted_tags.sort()
+			hash_parts.append("%s|%s|%d,%d,%d,%d|%s" % [
+				kind, id, rect.position.x, rect.position.y, rect.size.x, rect.size.y,
+				",".join(sorted_tags)])
 
 	for corridor in src.get("corridors", []):
 		var width := int(corridor.get("width", 3))
@@ -156,22 +165,43 @@ static func _carve_rect(def: FloorDefinition, rect: Rect2i) -> void:
 
 
 ## 축 정렬 통로. 대각선 통로는 지금 필요 없고, 허용하면 저작 실수가 조용히 통과한다.
+##
+## ## 폭 규칙 (`P2-REV-004`)
+## 생성되는 칸 수는 **정확히 `width`** 다.
+##
+## 전에는 `half = width / 2` 뒤 `-half..half`를 돌았다. GDScript의 `int / int`는 정수
+## 나눗셈이라 `width = 2`면 `half = 1`이 되어 `-1, 0, 1`의 **3칸**이 나왔다.
+## 저작 데이터는 폭 1·2·3·5를 구분해 쓰는데 2칸 통로가 조용히 3칸이 되고 있었다.
+##
+## 홀수 폭은 중심선 기준 대칭이다. 짝수 폭은 대칭이 불가능하므로 **음수 쪽(위/왼쪽)으로
+## 한 칸 치우친다** — 어느 쪽이든 골라야 하고, 고정해두지 않으면 저작자가 예측할 수 없다.
+##
+## | width | 오프셋 | 칸 수 |
+## |---|---|---|
+## | 1 | `0` | 1 |
+## | 2 | `-1, 0` | 2 |
+## | 3 | `-1, 0, 1` | 3 |
+## | 5 | `-2 … 2` | 5 |
 static func _fill_segment(def: FloorDefinition, a: Vector2i, b: Vector2i, width: int) -> void:
 	if a.x != b.x and a.y != b.y:
 		push_error("통로는 축 정렬이어야 한다: %v → %v" % [a, b])
 		return
-	var half := width / 2
+	if width < 1:
+		push_error("통로 폭은 1 이상이어야 한다: %d" % width)
+		return
+	var lo := -(width / 2)
+	var hi := lo + width - 1
 	if a.y == b.y:
 		var x0 := mini(a.x, b.x)
 		var x1 := maxi(a.x, b.x)
 		for x in range(x0, x1 + 1):
-			for dy in range(-half, half + 1):
+			for dy in range(lo, hi + 1):
 				def._add_walkable(Vector2i(x, a.y + dy))
 	else:
 		var y0 := mini(a.y, b.y)
 		var y1 := maxi(a.y, b.y)
 		for y in range(y0, y1 + 1):
-			for dx in range(-half, half + 1):
+			for dx in range(lo, hi + 1):
 				def._add_walkable(Vector2i(a.x + dx, y))
 
 

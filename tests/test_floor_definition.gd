@@ -16,6 +16,7 @@ func run(t: TestCase) -> void:
 	_test_seed_independence(t, def)
 	_test_hash_ignores_formatting(t)
 	_test_hash_covers_immutable_definition(t)
+	_test_corridor_width_is_exact(t)
 	_test_connectivity(t, def)
 	_test_start_point_is_walkable(t, def)
 	_test_blocks_are_carved(t, def)
@@ -103,7 +104,7 @@ func _test_hash_covers_immutable_definition(t: TestCase) -> void:
 	var base := {
 		"floor_id": "t", "theme_id": "t", "world_id": "w", "world_region_ref": "r",
 		"layout_version": 1, "objective_scope": "INDIVIDUAL",
-		"rooms": [{"id": "a", "rect": [0, 0, 6, 6], "tags": []}],
+		"rooms": [{"id": "a", "rect": [0, 0, 6, 6], "tags": ["landmark"]}],
 		"start_points": [[1, 1]],
 		"traps": [{"id": "tr", "cell": [2, 2], "type": "pitfall",
 			"lethal": true, "one_shot": false, "clues": ["갈라진 바닥"]}],
@@ -123,12 +124,26 @@ func _test_hash_covers_immutable_definition(t: TestCase) -> void:
 		"레이아웃 버전": func(d: Dictionary) -> void: d["layout_version"] = 2,
 		"목표 범위": func(d: Dictionary) -> void: d["objective_scope"] = "SHARED",
 		"파밍 지점 위치": func(d: Dictionary) -> void: d["loot_points"][0]["cell"] = [5, 3],
+		# `P2-REV-007` — 좌표가 같아도 의미 태그가 바뀌면 다른 정의다.
+		"공간 태그": func(d: Dictionary) -> void: d["rooms"][0]["tags"] = ["inner_complex"],
+		"공간 태그 추가": func(d: Dictionary) -> void: d["rooms"][0]["tags"] = ["landmark", "open"],
 	}
 	for label in mutations:
 		var changed: Dictionary = base.duplicate(true)
 		(mutations[label] as Callable).call(changed)
 		t.assert_true(FloorDefinitionLoader.build(changed).definition_hash != base_hash,
 			"%s 가 바뀌면 해시가 달라져야 한다 (P2-REV-003)" % label)
+
+	# 태그는 **서술 순서**에 흔들리면 안 된다 — 정렬해서 넣는 이유다 (`SYS-003`).
+	var reordered_tags: Dictionary = base.duplicate(true)
+	reordered_tags["rooms"][0]["tags"] = ["landmark"]
+	var two_a: Dictionary = base.duplicate(true)
+	two_a["rooms"][0]["tags"] = ["landmark", "open"]
+	var two_b: Dictionary = base.duplicate(true)
+	two_b["rooms"][0]["tags"] = ["open", "landmark"]
+	t.assert_eq(FloorDefinitionLoader.build(two_a).definition_hash,
+		FloorDefinitionLoader.build(two_b).definition_hash,
+		"태그 순서만 다르면 해시가 같아야 한다 (P2-REV-007)")
 
 	# 같은 정의를 다시 만들면 같아야 한다 — 위 비교가 우연이 아님을 보인다.
 	t.assert_eq(FloorDefinitionLoader.build(base.duplicate(true)).definition_hash, base_hash,
@@ -203,3 +218,47 @@ func _test_blocks_are_carved(t: TestCase, def: FloorDefinition) -> void:
 		"grand_hall 중앙 구조물이 파여야 한다")
 	# 기둥 옆은 여전히 통행 가능해야 한다 — 방을 통째로 막으면 안 된다
 	t.assert_true(def.is_walkable(Vector2i(92, 44)), "기둥 옆은 통행 가능")
+
+
+## `P2-REV-004` — 통로 폭이 저작 값과 **정확히** 같아야 한다.
+##
+## `half = width / 2` + `-half..half`는 GDScript 정수 나눗셈 때문에 짝수 폭에서 한 칸이
+## 더 생겼다. `width = 2`가 실제로는 3칸이었다. 저작 데이터가 폭 1·2·3·5를 구분해
+## 쓰고 있었으므로 **저작한 지형과 실제 통행 지형이 달랐다.**
+func _test_corridor_width_is_exact(t: TestCase) -> void:
+	for width in [1, 2, 3, 5]:
+		# 가로 통로 — 세로 방향 두께를 센다
+		var h := FloorDefinitionLoader.build({
+			"floor_id": "t", "theme_id": "t", "world_id": "w", "world_region_ref": "r",
+			"corridors": [{"id": "c", "width": width, "segments": [[10, 20, 14, 20]]}],
+			"start_points": [[10, 20]],
+		})
+		var h_thick := 0
+		for dy in range(-6, 7):
+			if h.is_walkable(Vector2i(12, 20 + dy)):
+				h_thick += 1
+		t.assert_eq(h_thick, width,
+			"가로 통로 폭 %d 는 정확히 %d칸이어야 한다 (P2-REV-004)" % [width, width])
+
+		# 세로 통로 — 가로 방향 두께
+		var v := FloorDefinitionLoader.build({
+			"floor_id": "t", "theme_id": "t", "world_id": "w", "world_region_ref": "r",
+			"corridors": [{"id": "c", "width": width, "segments": [[20, 10, 20, 14]]}],
+			"start_points": [[20, 10]],
+		})
+		var v_thick := 0
+		for dx in range(-6, 7):
+			if v.is_walkable(Vector2i(20 + dx, 12)):
+				v_thick += 1
+		t.assert_eq(v_thick, width,
+			"세로 통로 폭 %d 는 정확히 %d칸이어야 한다 (P2-REV-004)" % [width, width])
+
+		# 홀수는 중심선 대칭, 짝수는 음수 쪽으로 한 칸 치우친다 — 규칙을 고정해둔다.
+		t.assert_true(h.is_walkable(Vector2i(12, 20)),
+			"폭 %d 통로는 중심선을 반드시 포함해야 한다" % width)
+		if width % 2 == 0:
+			t.assert_true(h.is_walkable(Vector2i(12, 20 - width / 2)),
+				"짝수 폭 %d 는 음수 쪽으로 치우쳐야 한다" % width)
+			t.assert_true(not h.is_walkable(Vector2i(12, 20 + width / 2)),
+				"짝수 폭 %d 가 양수 쪽으로 넘치면 안 된다" % width)
+
