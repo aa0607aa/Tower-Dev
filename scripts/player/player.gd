@@ -44,6 +44,13 @@ var attack_state := AttackState.new()
 ## 마지막으로 바라본 방향. 멈춰 있어도 그쪽으로 휘두른다.
 var facing := Vector2.RIGHT
 
+## 월드 시간 배속 (`CBT-001`). `Main`이 넣어준다.
+##
+## 정지 중에는 **물리 이동 자체를 하지 않는다.** 좌표만 되돌리는 것으로는 부족하다 —
+## `move_and_slide()`가 돌면 그 프레임에 몸이 실제로 움직이고 함정·물체를 건드린다.
+## `P2-REV-006`에서 행동 반경으로 겪은 문제와 같은 계열이다.
+var time_scale: TimeScale = null
+
 var _dash_left := 0.0
 var _dash_cooldown := 0.0
 var _dash_direction := Vector2.ZERO
@@ -116,7 +123,19 @@ func advance_combat(world_delta: float) -> bool:
 	return attack_state.advance(world_delta)
 
 
+## 월드가 멈춰 있는가. `Main`과 테스트가 함께 쓴다.
+func is_world_paused() -> bool:
+	return time_scale != null and time_scale.is_paused()
+
+
 func _physics_process(delta: float) -> void:
+	# ★ 완전 정지 (`CBT-001` · `P4-REV-001`)
+	# **아무것도 하지 않는다.** 이동도, 대시 진행도, 물리 질의도.
+	# 여기서 `move_and_slide()`를 돌리면 정지 중에 함정을 밟을 수 있다.
+	if is_world_paused():
+		velocity = Vector2.ZERO
+		return
+
 	var raw := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if raw.length() > 0.0:
 		facing = raw.normalized()

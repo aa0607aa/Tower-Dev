@@ -14,7 +14,7 @@ extends RefCounted
 ##
 ## GDScript의 런타임 스크립트 에러는 **그 함수만** 중단시키고 `run()`은 계속 진행한다.
 ## 하한을 못박아 두면 그렇게 사라진 단언이 실패로 드러난다.
-const MIN_ASSERTIONS := 70
+const MIN_ASSERTIONS := 82
 
 
 func run(t: TestCase) -> void:
@@ -34,6 +34,7 @@ func run(t: TestCase) -> void:
 	_test_combat_state_roundtrip(t)
 	_test_time_scale(t)
 	_test_projectile_sweeps_path(t)
+	_test_active_window_survives_coarse_delta(t)
 	t.done()
 
 
@@ -470,6 +471,76 @@ func _test_time_scale(t: TestCase) -> void:
 	var src := FileAccess.get_file_as_string("res://scripts/world/time_scale.gd")
 	t.assert_true(not _code_only(src).contains("Engine.time_scale"),
 		"엔진 배속을 건드리면 물리·입력·UI가 함께 느려진다")
+
+
+## ★★ `P4-REV-003` — 큰 delta 하나로 공격 전체를 넘겨도 **타격이 사라지면 안 된다.**
+##
+## `WIND_UP → ACTIVE → RECOVERY`를 한 tick에 지나가면 `phase`는 이미 `RECOVERY`다.
+## 그때 `phase == ACTIVE`만 보면 **유효 구간이 통째로 유실**된다 —
+## 프레임률이 낮을수록 공격이 헛돈다. `CBT-001`(반실시간) 위반이다.
+func _test_active_window_survives_coarse_delta(t: TestCase) -> void:
+	var w := WeaponData.get_weapon(&"starting_dagger")
+	if w == null:
+		return
+	var total := w.total_duration()
+
+	# ① 큰 delta 하나로 공격 전체를 넘긴다
+	var coarse := AttackState.new()
+	coarse.start(w, Vector2.RIGHT)
+	var reported := coarse.advance(total * 1.5)
+	t.assert_true(reported, "유효 구간을 지나갔으면 그렇다고 알려야 한다")
+	t.assert_eq(int(coarse.phase), int(AttackState.Phase.IDLE), "공격은 끝났어야 한다")
+	t.assert_true(coarse.is_active_window(),
+		"한 tick에 지나쳤어도 타격 판정은 일어나야 한다 (P4-REV-003)")
+	t.assert_eq(coarse.weapon_id, w.id,
+		"끝났다고 무기를 지우면 같은 tick에 타격을 해결할 수 없다")
+	t.assert_vec_almost_eq(coarse.direction, Vector2.RIGHT, "방향도 남아 있어야 한다", 0.001)
+
+	# ② 실제로 타격이 들어가는가 — coarse vs fine이 같아야 한다
+	var origin := Vector2.ZERO
+	var target_pos := Vector2(w.reach * 0.5, 0.0)
+
+	var coarse_attacker := Combatant.new(&"a")
+	var coarse_target := Combatant.new(&"t")
+	var cs := AttackState.new()
+	cs.start(w, Vector2.RIGHT)
+	cs.advance(total * 1.5)
+	var coarse_hits := CombatService.targets_in_arc(origin, cs, w,
+		{&"t": {"position": target_pos, "combatant": coarse_target}})
+	t.assert_eq(coarse_hits.size(), 1,
+		"큰 delta에서도 대상이 잡혀야 한다 (실제 %d)" % coarse_hits.size())
+	var coarse_result := CombatService.strike(coarse_attacker, origin, cs,
+		&"t", coarse_target, target_pos)
+
+	var fine_attacker := Combatant.new(&"a")
+	var fine_target := Combatant.new(&"t")
+	var fs := AttackState.new()
+	fs.start(w, Vector2.RIGHT)
+	var fine_hits := 0
+	var fine_result := {}
+	for i in 100:
+		if fs.advance(total * 1.5 / 100.0):
+			var hits := CombatService.targets_in_arc(origin, fs, w,
+				{&"t": {"position": target_pos, "combatant": fine_target}})
+			if hits.size() > 0:
+				fine_hits += hits.size()
+				fine_result = CombatService.strike(fine_attacker, origin, fs,
+					&"t", fine_target, target_pos)
+
+	t.assert_eq(fine_hits, coarse_hits.size(),
+		"프레임률이 달라도 맞는 횟수가 같아야 한다 (거친 %d, 촘촘 %d)"
+		% [coarse_hits.size(), fine_hits])
+	t.assert_almost_eq(fine_target.vitality, coarse_target.vitality,
+		"프레임률이 달라도 피해가 같아야 한다 (거친 %.2f, 촘촘 %.2f)"
+		% [coarse_target.vitality, fine_target.vitality], 0.0001)
+	t.assert_true(float(coarse_result["damage"]) > 0.0, "실제로 피해가 들어가야 한다")
+	t.assert_true(not fine_result.is_empty(), "촘촘한 쪽도 타격이 있어야 한다")
+
+	# ③ 선딜만 지난 상태에서는 아직 타격이 없어야 한다
+	var early := AttackState.new()
+	early.start(w, Vector2.RIGHT)
+	early.advance(w.wind_up * 0.5)
+	t.assert_true(not early.is_active_window(), "선딜 중에는 타격 판정이 없어야 한다")
 
 
 ## ★ 투사체가 **빠르게 날아도 칸을 건너뛰지 않는다.**

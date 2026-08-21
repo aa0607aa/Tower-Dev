@@ -31,7 +31,9 @@ const VITAL_RADIUS := 7.0
 static func targets_in_arc(attacker_position: Vector2, state: AttackState,
 		weapon: WeaponData, targets: Dictionary) -> Array[StringName]:
 	var out: Array[StringName] = []
-	if weapon == null or state == null or state.phase != AttackState.Phase.ACTIVE:
+	# `phase == ACTIVE`만 보면 **한 tick에 유효 구간을 지나쳐버린 공격**을 놓친다.
+	# 낮은 프레임률에서 공격이 통째로 헛돈다 (`P4-REV-003`).
+	if weapon == null or state == null or not state.is_active_window():
 		return out
 
 	var half_arc := deg_to_rad(weapon.arc_degrees) * 0.5

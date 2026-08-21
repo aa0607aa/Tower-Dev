@@ -17,8 +17,10 @@ extends RefCounted
 ## 옛 v1 세이브를 그대로 읽으면 **등급이 빈 값으로 뭉개진다** — 조용히 잘못 읽느니
 ## `VERSION_MISMATCH`로 알린다. 출시 전이라 migration을 만들 이유가 없다.
 ## `v2 → v3` (`PHASE 4`): 전투 상태(`combatants`)가 추가됐다.
+## `v3 → v4` (`P4-REV-002`): 적 런타임 상태(`actor_states`)와 공격 진행(`attack_states`).
+## **대시는 저장하지 않는다** — 로드하면 취소된 것으로 본다 (`RunState` 주석 참조).
 ## v1/v2 호환이 필요해지면 여기에 **명시적 migration**을 만든다.
-const SAVE_VERSION := 3
+const SAVE_VERSION := 4
 
 
 static func to_dict(run: RunState) -> Dictionary:
@@ -73,6 +75,10 @@ static func from_text(text: String, defs: Dictionary) -> Dictionary:
 		for cid in wd.get("combatants", {}):
 			world.combatants[StringName(cid)] = Combatant.from_save_dict(wd["combatants"][cid])
 
+		# 적 런타임 상태 — 위치·공격 진행·행동 모드 (`P4-REV-002`).
+		for aid in wd.get("actor_states", {}):
+			world.actor_states[StringName(aid)] = wd["actor_states"][aid]
+
 		for entry in wd.get("ground_items", []):
 			world.put_ground_item(
 				ItemInstance.from_save_dict(entry["instance"]),
@@ -88,6 +94,10 @@ static func from_text(text: String, defs: Dictionary) -> Dictionary:
 	# 유배자 전투 상태 — 층을 넘어 따라간다.
 	for eid in d.get("combatants", {}):
 		run.combatants[StringName(eid)] = Combatant.from_save_dict(d["combatants"][eid])
+
+	# 유배자 공격 진행 — 휘두르던 중에 저장하면 선딜이 사라지면 안 된다.
+	for eid in d.get("attack_states", {}):
+		run.attack_states[StringName(eid)] = d["attack_states"][eid]
 
 	return {"status": status, "run": run}
 

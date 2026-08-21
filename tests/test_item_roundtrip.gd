@@ -210,8 +210,8 @@ func _test_drop_is_transactional(t: TestCase, def: FloorDefinition) -> void:
 ## v1을 그대로 읽으면 **등급이 빈 값으로 뭉개진다** — 잘못 읽느니 알린다.
 func _test_save_version_rejects_old(t: TestCase, def: FloorDefinition, defs: Dictionary) -> void:
 	# 스키마가 바뀔 때마다 올라간다. v2 = durability 분리, v3 = 전투 상태 추가.
-	t.assert_true(RunSave.SAVE_VERSION >= 2,
-		"스키마가 바뀌었으므로 버전이 올라가야 한다 (현재 %d)" % RunSave.SAVE_VERSION)
+	t.assert_true(RunSave.SAVE_VERSION >= 4,
+		"스키마가 바뀔 때마다 버전이 올라가야 한다 (현재 %d)" % RunSave.SAVE_VERSION)
 
 	var run := RunState.new(5)
 	run.ensure_world(def.world_id)

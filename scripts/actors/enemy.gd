@@ -165,11 +165,24 @@ func get_combatant() -> Combatant:
 	return combatant
 
 
-func to_save_dict() -> Dictionary:
+## 노드가 들고 있는 **런타임 상태**. `WorldState.actor_states`가 정본이고
+## 이것은 그 값을 만들어 주는 것뿐이다 (`P4-REV-002`).
+## `combatant`는 `WorldState.combatants`가 따로 저장하므로 여기 넣지 않는다.
+func to_runtime_dict() -> Dictionary:
 	return {
-		"id": String(combatant.id),
 		"position": [global_position.x, global_position.y],
-		"combatant": combatant.to_save_dict(),
 		"attack": attack_state.to_save_dict(),
 		"mode": int(mode),
 	}
+
+
+## 저장된 런타임 상태를 노드에 적용한다.
+func apply_runtime_dict(d: Dictionary) -> void:
+	if d.is_empty():
+		return
+	var pos: Array = d.get("position", [])
+	if pos.size() == 2:
+		global_position = Vector2(float(pos[0]), float(pos[1]))
+	if d.has("attack"):
+		attack_state = AttackState.from_save_dict(d["attack"])
+	mode = int(d.get("mode", Mode.IDLE)) as Mode

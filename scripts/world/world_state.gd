@@ -46,6 +46,14 @@ var fruit_effects: Dictionary = {}
 ## 유배자 본인의 전투 상태는 여기가 아니라 `RunState`에 있다.
 var combatants: Dictionary = {}
 
+## `combatant_id → { position: [x, y], attack: {...}, mode: int }` (`P4-REV-002`).
+##
+## ## 씬 노드가 정본이 되면 안 된다
+## `Enemy`는 `Node2D`라 위치·공격 진행이 노드에 있다. 그 상태로 저장하지 않으면
+## **로드할 때 적이 스폰 지점으로 되돌아가고 휘두르던 공격이 사라진다.**
+## 세이브의 진실은 이 데이터이고 노드는 그것을 그리는 것뿐이다 (`SYS-003`).
+var actor_states: Dictionary = {}
+
 
 func _init(p_world_id: StringName = &"") -> void:
 	world_id = p_world_id
@@ -150,9 +158,16 @@ func to_save_dict() -> Dictionary:
 	for cid in combat_ids:
 		combat_out[String(cid)] = (combatants[cid] as Combatant).to_save_dict()
 
+	var actor_ids: Array = actor_states.keys()
+	actor_ids.sort_custom(func(a: Variant, b: Variant) -> bool: return String(a) < String(b))
+	var actors_out := {}
+	for aid in actor_ids:
+		actors_out[String(aid)] = actor_states[aid]
+
 	return {
 		"world_id": String(world_id),
 		"combatants": combat_out,
+		"actor_states": actors_out,
 		"floors": floor_out,
 		"terrain": terrain.to_save_dict() if terrain != null else {},
 		"ground_items": items_out,

@@ -100,6 +100,11 @@ func _ready() -> void:
 	# 유배자의 전투 상태. `RunState`가 소유한다 — 층을 넘어 따라가야 하므로
 	# `FloorState`에 두면 계단을 오를 때 사라진다 (`WLD-003`).
 	_player.combatant = _run.ensure_combatant(EXILE_ID)
+	# 정지 중에는 플레이어가 물리적으로 움직이지 않아야 한다 (`P4-REV-001`).
+	_player.time_scale = _time
+	# 휘두르던 공격이 있으면 이어받는다 (`P4-REV-002`).
+	if _run.attack_states.has(EXILE_ID):
+		_player.attack_state = AttackState.from_save_dict(_run.attack_states[EXILE_ID])
 
 	_spawn_enemies()
 
@@ -171,6 +176,9 @@ func _spawn_enemies() -> void:
 		add_child(e)
 		var cell: Vector2i = point["cell"]
 		e.global_position = Vector2(cell.x * CELL + CELL / 2.0, cell.y * CELL + CELL / 2.0)
+		# 저장된 런타임 상태가 있으면 **그것이 정본**이다 (`P4-REV-002`).
+		# 없으면 지금 정한 스폰 위치가 시작값이 된다.
+		e.apply_runtime_dict(_world.actor_states.get(e.combatant.id, {}))
 		_enemies.append(e)
 	GameLog.info("Main", "적 %d체 배치" % _enemies.size())
 
@@ -247,12 +255,26 @@ func _advance_combat(engine_delta: float) -> void:
 		if not hit.is_empty() and float(hit.get("damage", 0.0)) > 0.0:
 			_on_player_hurt(hit)
 
+	_sync_runtime_state()
+
 	for p in _projectiles.duplicate():
 		if p == null or not is_instance_valid(p):
 			_projectiles.erase(p)
 			continue
 		if p.tick(world_delta):
 			_projectiles.erase(p)
+
+
+## 노드의 런타임 상태를 **세이브의 정본**에 밀어 넣는다 (`P4-REV-002`).
+##
+## 씬 노드가 정본이면 저장할 때 그 노드를 뒤져야 하고, 노드가 사라진 순간 상태도 사라진다.
+## 그래서 매 틱 데이터 쪽으로 옮겨둔다 — 저장은 언제든 데이터만 보면 된다.
+func _sync_runtime_state() -> void:
+	for e in _enemies:
+		if e == null or not is_instance_valid(e) or e.combatant == null:
+			continue
+		_world.actor_states[e.combatant.id] = e.to_runtime_dict()
+	_run.attack_states[EXILE_ID] = _player.attack_state.to_save_dict()
 
 
 ## 플레이어의 유효 구간 타격. 판정은 전부 `CombatService`가 한다.
@@ -301,6 +323,10 @@ func _notice(text: String) -> void:
 ## 던진 돌·NPC도 같은 경로를 쓴다 — 그래야 원작의 "돌로 먼저 터뜨리기"가 성립한다.
 func _check_trap_underfoot() -> void:
 	if _floor_def == null or _floor_state == null:
+		return
+	# 정지 중에는 월드가 바뀌지 않는다 (`P4-REV-001`). 플레이어도 안 움직이지만
+	# 판정 자체를 막아 "정지 중에 함정이 터졌다"가 구조적으로 불가능하게 한다.
+	if _time.is_paused():
 		return
 	# 자극 생성은 **어댑터 한 곳**에서만 한다 (`P3-REV-008`).
 	# 플레이어·던진 물체·NPC가 각자 자극을 만들면 한쪽만 잘못 보내는 버그가 다시 난다 —
@@ -373,7 +399,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## 줍기. 소유권 이동은 전부 `ItemService`가 하고 여기서는 입력만 잇는다.
 func _on_interact() -> void:
-	if _floor_def == null or _world == null:
+	if _floor_def == null or _world == null or _time.is_paused():
 		return
 	var target := InteractionService.best(
 		_floor_def, _world, _player.access_envelope, _player_cell())
@@ -388,6 +414,8 @@ func _on_interact() -> void:
 ##
 ## 투사체는 **자기 자극을 만들지 않는다** — 착지 위치를 `TrapSensor`에 넘길 뿐이다.
 func _on_throw() -> void:
+	if _time.is_paused():
+		return
 	if _player.combatant == null or not _player.combatant.alive:
 		return
 	var p := ThrownObject.new()
@@ -408,7 +436,7 @@ func _on_throw() -> void:
 ## 지금은 마지막에 주운 것을 버린다. 무엇을 버릴지 고르는 UI는 인벤토리 화면의 일이고,
 ## 그건 `PHASE 6`(무게·장비)과 함께 다뤄야 형태가 정해진다.
 func _on_drop() -> void:
-	if _run == null or _world == null:
+	if _run == null or _world == null or _time.is_paused():
 		return
 	var inv: Array = _run.inventory(EXILE_ID)
 	if inv.is_empty():

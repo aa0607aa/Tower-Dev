@@ -77,6 +77,14 @@ func tick(world_delta: float) -> bool:
 			_land(global_position)
 			return true
 
+		# ## 첫 충돌 순서를 **고정한다** (`P4-REV-005`)
+		# 한 칸에 여러 가지가 있을 수 있다. 순서가 흔들리면 같은 상황에서 다른 결과가 난다.
+		#   ① 벽 — 위에서 이미 처리했다. 물리적으로 못 들어간다
+		#   ② 대상 — **몸이 바닥보다 먼저 막는다.** 사람에게 맞은 돌은 바닥에 닿지 않는다
+		#   ③ 함정 — 아무것도 막지 않았을 때 바닥의 감지부에 닿는다
+		if _hit_target_in_cell(cell, cell_center):
+			return true
+
 		if cell == _last_cell:
 			continue
 		_last_cell = cell
@@ -92,10 +100,6 @@ func tick(world_delta: float) -> bool:
 
 	global_position = next
 	_travelled += step.length()
-
-	# 대상에 맞았는가 — 공간 판정이다 (`CBT-008`, 굴림 없음).
-	if _hit_target():
-		return true
 
 	if _travelled >= MAX_RANGE:
 		_land(global_position)
@@ -122,10 +126,17 @@ func _cells_between(from: Vector2, to: Vector2) -> Array[Vector2i]:
 	return out
 
 
-func _hit_target() -> bool:
+## 이 칸에 있는 대상에 맞았는가.
+##
+## 전에는 **끝점에서 12px 안**만 봤다. 그래서 빠르게 날면 대상이 있는 칸을 통째로
+## 건너뛰었다 — 벽·함정은 스윕하면서 대상만 끝점을 본 비대칭이었다 (`P4-REV-005`).
+##
+## 이제 지나간 **칸**을 기준으로 본다. 프레임률이 달라도 같은 대상에 맞는다.
+func _hit_target_in_cell(cell: Vector2i, cell_center: Vector2) -> bool:
 	if not target_provider.is_valid():
 		return false
 	var targets: Dictionary = target_provider.call()
+	# 같은 칸에 여럿이면 id 순으로 **결정적으로** 고른다 (`SYS-003`).
 	var ids: Array = targets.keys()
 	ids.sort_custom(func(a: Variant, b: Variant) -> bool: return String(a) < String(b))
 	for id in ids:
@@ -133,7 +144,7 @@ func _hit_target() -> bool:
 		var c: Combatant = entry["combatant"]
 		if c == null or not c.alive:
 			continue
-		if global_position.distance_to(entry["position"] as Vector2) > 12.0:
+		if TrapSensor.cell_of(entry["position"] as Vector2) != cell:
 			continue
 		# 던진 무기로 피해를 준다. 크리티컬은 사건에서만 (`CBT-004`).
 		if thrower != null:
@@ -142,7 +153,8 @@ func _hit_target() -> bool:
 				var r := DamageModel.resolve(stone, thrower.stats, c.armor,
 					c.body_resilience, {})
 				c.apply_damage(float(r["damage"]))
-		_land(global_position)
+		global_position = cell_center
+		_land(cell_center)
 		return true
 	return false
 
