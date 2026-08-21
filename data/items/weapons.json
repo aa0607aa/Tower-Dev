@@ -1,0 +1,60 @@
+{
+  "_comment": [
+    "무기 데이터. CBT-012가 '무기별 스탯 비중은 무기 데이터에서 개별 정의하며",
+    "코드에 하드코딩하지 않는다'고 **구현 방식까지 지정**했다. 그래서 여기 있다.",
+    "",
+    "⚠ **아래 수치는 전부 DESIGN이며 canon이 아니다.**",
+    "CBT-006이 명중/회피·급소 배율·무기별 스탯 가중치를 **TBD**로 명시한다.",
+    "여기 값은 PHASE 4 전투가 돌아가기 위한 최소 기준선이고 PLAYTEST/PHASE 6에서 조정한다.",
+    "세계관 사실로 인용하지 말 것.",
+    "",
+    "canon으로 고정된 것만 반영했다:",
+    "  - FLR-007: 대거는 극초반 기준 성능이 좋은 편이고 **약점은 짧은 리치**",
+    "  - CBT-007: 리치가 짧을수록 암습(관통·절삭) 보정이 커진다",
+    "  - CBT-012: 단검은 힘과 민첩을 함께 쓴다",
+    "",
+    "wind_up / active / recovery 는 CBT-008의 3구간 모델이다 (DESIGN).",
+    "초 단위이며 프레임이 아니다 — 프레임률에 묶으면 CBT-001 반실시간이 깨진다."
+  ],
+  "weapons": [
+    {
+      "id": "starting_dagger",
+      "name": "대거",
+      "reach": 34.0,
+      "arc_degrees": 90.0,
+      "base_attack": 12.0,
+      "penetration": 6.0,
+      "stat_weights": { "STR": 0.5, "AGI": 0.5, "INT": 0.0 },
+      "wind_up": 0.10,
+      "active": 0.08,
+      "recovery": 0.22,
+      "_note": "FLR-007 — 전 유배자 공통 초기 장비. 성능은 좋고 리치가 짧다."
+    },
+    {
+      "id": "rusty_shortsword",
+      "name": "녹슨 숏소드",
+      "reach": 46.0,
+      "arc_degrees": 100.0,
+      "base_attack": 15.0,
+      "penetration": 5.0,
+      "stat_weights": { "STR": 0.7, "AGI": 0.3, "INT": 0.0 },
+      "wind_up": 0.16,
+      "active": 0.10,
+      "recovery": 0.30,
+      "_note": "FLR-014 — 1층 파밍 무기는 품질이 나쁘지만 대거보다는 낫다."
+    },
+    {
+      "id": "thrown_stone",
+      "name": "돌",
+      "reach": 0.0,
+      "arc_degrees": 0.0,
+      "base_attack": 4.0,
+      "penetration": 2.0,
+      "stat_weights": { "STR": 0.8, "AGI": 0.2, "INT": 0.0 },
+      "wind_up": 0.12,
+      "active": 0.0,
+      "recovery": 0.25,
+      "_note": "던지기용. FLR-028의 '돌로 함정 터뜨리기'가 이 무기를 쓴다."
+    }
+  ]
+}
