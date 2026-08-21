@@ -14,7 +14,7 @@ extends RefCounted
 ##
 ## GDScript의 런타임 스크립트 에러는 **그 함수만** 중단시키고 `run()`은 계속 진행한다.
 ## 하한을 못박아 두면 그렇게 사라진 단언이 실패로 드러난다.
-const MIN_ASSERTIONS := 82
+const MIN_ASSERTIONS := 101
 
 
 func run(t: TestCase) -> void:
@@ -24,6 +24,7 @@ func run(t: TestCase) -> void:
 	_test_damage_uses_four_stage_formula(t)
 	_test_critical_is_not_random(t)
 	_test_ambush_favors_short_reach(t)
+	_test_design_baselines_are_not_pinned(t)
 	_test_resilience_is_not_exposed(t)
 	_test_no_hardcoded_weapon_branches(t)
 	_test_attack_phases(t)
@@ -35,6 +36,7 @@ func run(t: TestCase) -> void:
 	_test_time_scale(t)
 	_test_projectile_sweeps_path(t)
 	_test_active_window_survives_coarse_delta(t)
+	_test_projectile_hits_target_without_tunneling(t)
 	t.done()
 
 
@@ -191,6 +193,11 @@ func _test_critical_is_not_random(t: TestCase) -> void:
 
 
 ## `CBT-007` CANON(방향) — 기습은 관통에 작용하고, 리치가 짧을수록 크다.
+##
+## ## 숫자가 아니라 **구조**를 본다 (`P4-REV-004`, 오너 승인 2026-08-21)
+## 정확한 배율은 `CBT-006`과 함께 TBD다. 임시 기준선은 PLAYTEST용으로만 허용됐으므로
+## **테스트가 특정 숫자를 고정하면 안 된다** — 고정하는 순간 튜닝이 막히고
+## 사실상 canon처럼 굳는다. 지켜야 하는 것은 "리치가 짧을수록 크다"는 **성질**이다.
 func _test_ambush_favors_short_reach(t: TestCase) -> void:
 	var dagger := WeaponData.get_weapon(&"starting_dagger")
 	var sword := WeaponData.get_weapon(&"rusty_shortsword")
@@ -582,6 +589,111 @@ func _test_projectile_sweeps_path(t: TestCase) -> void:
 	t.assert_eq(coarse, fine,
 		"프레임률이 달라도 같은 칸을 지나야 한다 (CBT-001 반실시간)")
 	p.free()
+
+
+## ★★ `P4-REV-005` — 투사체가 **빠르게 날아도 대상을 지나치지 않는다.**
+##
+## 벽·함정은 경로를 훑는데 **대상만 끝점 거리로 봤다.** 비대칭이라
+## 빠르게 날면 적이 있는 칸을 건너뛰었다.
+##
+## 이 테스트가 없어서 변이가 안 잡혔다 — 대상 충돌을 통째로 지워도 전부 통과했다.
+func _test_projectile_hits_target_without_tunneling(t: TestCase) -> void:
+	var target_cell := Vector2i(5, 0)
+	var target_pos := Vector2(target_cell.x * 32 + 16, 16)
+
+	# ① 큰 delta 하나 — 대상을 지나칠 만큼
+	var coarse_target := Combatant.new(&"victim")
+	var coarse := _make_projectile(coarse_target, target_pos)
+	var coarse_landed := false
+	for i in 10:
+		if coarse.tick(0.5):  # 0.5초 = 210px, 대상(176px)을 훌쩍 넘는다
+			coarse_landed = true
+			break
+	t.assert_true(coarse_landed, "투사체가 결국 멈춰야 한다")
+	t.assert_true(coarse_target.vitality < Combatant.BASELINE_VITALITY,
+		"큰 delta에서도 대상에 맞아야 한다 (P4-REV-005 — 남은 %.1f)"
+		% coarse_target.vitality)
+
+	# ② 촘촘한 delta — 같은 결과여야 한다
+	var fine_target := Combatant.new(&"victim")
+	var fine := _make_projectile(fine_target, target_pos)
+	for i in 500:
+		if fine.tick(0.5 / 50.0):
+			break
+	t.assert_true(fine_target.vitality < Combatant.BASELINE_VITALITY,
+		"촘촘한 delta에서도 맞아야 한다")
+	t.assert_almost_eq(coarse_target.vitality, fine_target.vitality,
+		"프레임률이 달라도 같은 피해여야 한다 (거친 %.2f, 촘촘 %.2f)"
+		% [coarse_target.vitality, fine_target.vitality], 0.0001)
+
+	# ③ 죽은 대상은 막지 않는다 — 시체를 뚫고 날아간다
+	var corpse := Combatant.new(&"corpse")
+	corpse.alive = false
+	var through := _make_projectile(corpse, target_pos)
+	for i in 20:
+		if through.tick(0.05):
+			break
+	t.assert_almost_eq(corpse.vitality, Combatant.BASELINE_VITALITY,
+		"시체는 더 이상 맞지 않는다", 0.0001)
+
+	coarse.free()
+	fine.free()
+	through.free()
+
+
+## 대상 하나를 향해 오른쪽으로 날아가는 투사체.
+func _make_projectile(target: Combatant, target_pos: Vector2) -> ThrownObject:
+	var p := ThrownObject.new()
+	p.direction = Vector2.RIGHT
+	p.thrower_id = &"player"
+	p.thrower = Combatant.new(&"player")
+	p.global_position = Vector2(16, 16)
+	# 지형·함정은 여기서 보지 않는다 — 대상 충돌만 격리해 본다.
+	p.trap_sensor = null
+	p.envelope = null
+	p.target_provider = func() -> Dictionary:
+		return {&"victim": {"position": target_pos, "combatant": target}}
+	return p
+
+
+## ★ `P4-REV-004` — 임시 DESIGN 기준선을 테스트가 **숫자로 고정하지 않는다.**
+##
+## 오너가 PLAYTEST용 임시값으로 허용했고(2026-08-21) `PHASE 6`에서 재조정된다.
+## 테스트가 `base_attack == 12.0` 같은 것을 단언하면 튜닝할 때마다 테스트가 깨지고,
+## 결국 숫자가 canon처럼 굳는다. **구조적 불변식만** 보호해야 한다.
+func _test_design_baselines_are_not_pinned(t: TestCase) -> void:
+	var dagger := WeaponData.get_weapon(&"starting_dagger")
+	var sword := WeaponData.get_weapon(&"rusty_shortsword")
+	var stone := WeaponData.get_weapon(&"thrown_stone")
+	if dagger == null or sword == null or stone == null:
+		return
+
+	# 지켜야 하는 **성질**들 — 숫자가 아니다
+	t.assert_true(dagger.reach < sword.reach,
+		"대거가 더 짧다 (FLR-007 — 약점은 짧은 리치)")
+	t.assert_true(DamageModel.ambush_penetration_bonus(dagger)
+			> DamageModel.ambush_penetration_bonus(sword),
+		"리치가 짧을수록 암습 보정이 크다 (CBT-007 방향)")
+	t.assert_true(float(sword.stat_weights.get("STR", 0))
+			> float(dagger.stat_weights.get("STR", 0)),
+		"긴 무기일수록 힘 비중이 크다 (CBT-012 — 대검은 힘, 단검은 힘+민첩)")
+	t.assert_true(dagger.wind_up < sword.wind_up,
+		"짧은 무기가 더 빨리 나간다")
+	t.assert_true(stone.reach <= 0.0, "던지는 무기는 근접 리치가 없다")
+
+	for w in [dagger, sword, stone]:
+		t.assert_true(w.base_attack > 0.0, "%s 공격력이 0이면 무기가 아니다" % w.id)
+		var sum := 0.0
+		for k in w.stat_weights:
+			sum += float(w.stat_weights[k])
+		t.assert_true(sum > 0.0, "%s 가 아무 스탯도 안 쓰면 스케일링이 죽는다" % w.id)
+
+	# 데이터가 **비canon임을 스스로 밝혀야** 한다 — 다음 AI가 인용하지 않도록
+	var raw := FileAccess.get_file_as_string("res://data/items/weapons.json")
+	t.assert_true(raw.contains("canon이 아니다"),
+		"무기 데이터가 비canon임을 명시해야 한다 (P4-REV-004)")
+	t.assert_true(raw.contains("P4-REV-004"),
+		"오너 승인 근거가 데이터에 남아 있어야 한다")
 
 
 func _code_only(src: String) -> String:

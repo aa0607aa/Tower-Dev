@@ -130,7 +130,11 @@ static func resolve(weapon: WeaponData, stats: Dictionary, armor: float,
 ## 정확한 배율은 `CBT-006`과 함께 **TBD**다. 여기서는 방향만 구현한다 —
 ## 리치가 길수록 1.0에 수렴하고, 짧을수록 커진다.
 ## 숫자를 바꾸더라도 **단조 감소**라는 성질은 유지해야 한다.
-const AMBUSH_REFERENCE_REACH := 40.0  ## DESIGN. 이 리치에서 보정이 2배가 된다.
+## **DESIGN이며 canon 아님.** 오너 승인 2026-08-21 (`P4-REV-004`) — PLAYTEST용 임시 기준선.
+## 이 리치에서 보정이 2배가 된다. `PHASE 6`에서 재조정한다.
+##
+## 이 숫자를 테스트로 고정하지 마라. 지켜야 하는 것은 **단조 감소**라는 성질이다.
+const AMBUSH_REFERENCE_REACH := 40.0
 
 
 static func ambush_penetration_bonus(weapon: WeaponData) -> float:

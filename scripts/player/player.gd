@@ -1,7 +1,8 @@
 extends CharacterBody2D
-## 플레이어 — PHASE 1 임시 구현.
+## 플레이어 — PHASE 4까지 반영.
 ##
-## 지금은 이동과 충돌만 한다. 스탯·부상·장비는 PHASE 6, 전투는 PHASE 4다.
+## 이동·충돌에 더해 공격(`AttackState`)·대시·전투 상태(`Combatant`)를 들고 있다.
+## 스탯·부상·장비 본체는 여전히 `PHASE 6`이다.
 ## 스프라이트는 임시 색 박스이며 PHASE 8에서 도트로 교체한다.
 ##
 ## canon 근거:

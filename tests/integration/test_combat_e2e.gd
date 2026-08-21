@@ -10,6 +10,9 @@ extends RefCounted
 ##   → `Main._advance_combat()` → `CombatService` → `Combatant.apply_damage()`
 ##
 ## 전술 정지·대시·던지기도 같은 경로로 본다.
+##
+## 정지의 **완전성**과 전투 세이브 무결성은 `test_pause_and_save_e2e.gd`가 따로 본다
+## (`P4-REV-001` `P4-REV-002`).
 
 const MAIN_SCENE := "res://scenes/world/Main.tscn"
 const CELL := 32
