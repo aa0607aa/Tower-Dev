@@ -108,13 +108,12 @@ func _test_repeating_trap_keeps_clue(t: TestCase, def: FloorDefinition) -> void:
 	view.free()
 
 
-## `ClueView`가 이 함정의 흔적을 그리는가 — `_draw()`와 같은 조건을 재현한다.
+## `ClueView`가 이 함정의 흔적을 그리는가.
+##
+## **조건을 복제하지 않고 실제 결정 함수를 부른다.** 복제하면 구현이 바뀌어도
+## 테스트가 계속 통과해 아무것도 지키지 못한다.
 func _is_visible(view: ClueView, trap: Dictionary) -> bool:
-	if (trap["clues"] as Array).is_empty():
-		return false
-	if view.state != null and not view.state.trap_is_armed(trap["id"]):
-		return false
-	return not _trace_cells(view, trap).is_empty()
+	return view.shows_trace_for(trap) and not _trace_cells(view, trap).is_empty()
 
 
 ## 흔적 위치가 **결정적**이어야 한다.

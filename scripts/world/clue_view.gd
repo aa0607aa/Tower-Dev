@@ -56,21 +56,29 @@ func _draw() -> void:
 		return
 
 	for trap in definition.traps:
-		# 단서가 없는 함정은 흔적도 없다. `FLR-011`은 **치명** 함정에 단서를 요구하며,
-		# 그 검사는 테스트가 한다. 여기서 없는 단서를 만들어내지 않는다.
-		var clues: Array = trap["clues"]
-		if clues.is_empty():
+		if not shows_trace_for(trap):
 			continue
-		# 흔적을 지우는 기준은 "터졌는가"가 아니라 **"위험이 남아 있는가"** 다 (`P3-REV-001`).
-		#
-		# `FloorState.fire_trap()`은 `one_shot`이 아닌 함정의 `armed`를 **true로 유지**한다.
-		# 함정 바닥처럼 반복해서 걸리는 치명 함정이 그렇다. `fired`만 보고 지우면
-		# **첫 발동 이후 위험이 그대로인데 단서만 사라진다** — `FLR-011` 위반이다.
-		# 실제로 `TrapRuntime.should_fire()`는 그 함정을 다시 발동시킨다.
-		if state != null and not state.trap_is_armed(trap["id"]):
-			continue
-
 		_draw_traces(trap)
+
+
+## 이 함정의 흔적을 지금 그리는가.
+##
+## **판단을 `_draw()` 안에 두지 않는다.** 그리기 안에 있으면 테스트가 화면을 볼 수 없어
+## 규칙을 복제해서 검사하게 되고, 그러면 구현이 바뀌어도 테스트는 계속 통과한다.
+##
+## ## 기준은 "터졌는가"가 아니라 "위험이 남아 있는가" (`P3-REV-001`)
+## `FloorState.fire_trap()`은 `one_shot`이 아닌 함정의 `armed`를 **true로 유지**한다.
+## 함정 바닥처럼 반복해서 걸리는 치명 함정이 그렇다. `fired`만 보고 지우면
+## **첫 발동 이후 위험이 그대로인데 단서만 사라진다** — `FLR-011` 위반이다.
+## 실제로 `TrapRuntime.should_fire()`는 그 함정을 다시 발동시킨다.
+func shows_trace_for(trap: Dictionary) -> bool:
+	# 단서가 없는 함정은 흔적도 없다. `FLR-011`은 **치명** 함정에 단서를 요구하며,
+	# 그 검사는 테스트가 한다. 여기서 없는 단서를 만들어내지 않는다.
+	if (trap["clues"] as Array).is_empty():
+		return false
+	if state != null and not state.trap_is_armed(trap["id"]):
+		return false
+	return true
 
 
 ## 함정 하나 주변에 흔적을 뿌린다.
