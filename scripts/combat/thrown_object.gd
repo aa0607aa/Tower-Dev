@@ -33,6 +33,8 @@ var thrower: Combatant = null
 
 var _travelled := 0.0
 var _landed := false
+## 마지막으로 자극을 낸 칸. 한 칸에서 매 프레임 자극이 나가면 안 된다.
+var _last_cell := Vector2i(-99999, -99999)
 
 
 func _ready() -> void:
@@ -58,6 +60,22 @@ func tick(world_delta: float) -> bool:
 
 	global_position = next
 	_travelled += step.length()
+
+	# ## 지나가는 칸마다 자극을 낸다
+	# 전에는 **착지 지점에서만** 자극을 냈다. 그래서 함정 칸 위를 그냥 날아서 지나가고
+	# 사거리 끝에 떨어졌다 — `FLR-028`의 원작 공략("함정을 향해 돌을 던진다")이
+	# 정작 되지 않았다. 오너가 플레이에서 발견했다 (2026-08-21).
+	#
+	# 감지부를 건드렸으면 거기서 멈춘다. 돌이 실선이나 압력판을 치고 계속 날아가지 않는다.
+	var cell := TrapSensor.cell_of(global_position)
+	if cell != _last_cell:
+		_last_cell = cell
+		if trap_sensor != null:
+			var fired := trap_sensor.sense_impact(global_position, MASS,
+				CausalSource.new(thrower_id, CausalSource.Kind.THROWN))
+			if not fired.is_empty():
+				_land(global_position)
+				return true
 
 	# 대상에 맞았는가 — 공간 판정이다 (`CBT-008`, 굴림 없음).
 	if _hit_target():
@@ -99,7 +117,8 @@ func _land(at: Vector2) -> void:
 	if _landed:
 		return
 	_landed = true
-	if trap_sensor != null:
+	# 비행 중 이미 이 칸에서 자극을 냈으면 다시 내지 않는다 — 한 번의 착지는 한 번이다.
+	if trap_sensor != null and TrapSensor.cell_of(at) != _last_cell:
 		trap_sensor.sense_impact(at, MASS,
 			CausalSource.new(thrower_id, CausalSource.Kind.THROWN))
 	queue_free()

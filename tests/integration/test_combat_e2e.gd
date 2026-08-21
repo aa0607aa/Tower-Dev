@@ -15,7 +15,7 @@ const MAIN_SCENE := "res://scenes/world/Main.tscn"
 const CELL := 32
 
 ## 이 파일이 최소한 실행해야 하는 단언 수. (`P3-REV-008` 후속)
-const MIN_ASSERTIONS := 25
+const MIN_ASSERTIONS := 30
 
 
 func run(tree: SceneTree, t: TestCase) -> void:
@@ -36,6 +36,7 @@ func run(tree: SceneTree, t: TestCase) -> void:
 	await _test_dash_moves_further(tree, t, main)
 	await _test_throw_creates_projectile(tree, t, main)
 	await _test_enemy_attacks_player(tree, t, main)
+	await _test_thrown_stone_fires_trap_in_flight(tree, t, main)
 	_test_combat_survives_save_load(t, main)
 
 	main.queue_free()
@@ -174,6 +175,73 @@ func _test_throw_creates_projectile(tree: SceneTree, t: TestCase, main: Node2D) 
 			break
 	t.assert_eq(main._projectiles.size(), 0,
 		"투사체는 사거리 끝에서 사라져야 한다 (남은 %d)" % main._projectiles.size())
+
+
+## ★★ 던진 돌이 **날아가는 도중** 함정을 터뜨린다. (`FLR-028` 원작 공략)
+##
+## ## 이 테스트가 왜 생겼는가
+## 오너가 플레이에서 **"함정이 돌 던지기에 안 터진다"** 를 발견했다 (2026-08-21).
+##
+## 원인: `ThrownObject`가 **착지 지점에서만** 자극을 냈다. 함정이 3칸 앞이면
+## 돌이 그 위를 그냥 날아서 지나가고 사거리 끝(8칸)에 떨어졌다.
+##
+## 기존 테스트가 못 잡은 이유가 중요하다:
+##   - `test_nonplayer_stimulus_e2e.gd`는 `sense_impact()`를 **함정 칸에서 직접** 불렀다
+##   - `test_combat_e2e.gd`는 투사체가 **생겼다 사라지는지**만 봤다
+## 즉 어댑터도 투사체 수명도 옳은데 **둘을 잇는 좌표가 틀렸다.**
+## `P3-REV-005`와 같은 계열이다 — 부품은 맞고 호출 지점이 틀린 버그.
+func _test_thrown_stone_fires_trap_in_flight(tree: SceneTree, t: TestCase, main: Node2D) -> void:
+	var def: FloorDefinition = main._floor_def
+	var state: FloorState = main._floor_state
+	var player: CharacterBody2D = main._player
+
+	# 아직 무장된 wall_bolt를 찾는다 — 돌(0.5kg)이 터뜨릴 수 있는 종류다.
+	var trap := {}
+	for candidate in def.traps:
+		if candidate["type"] != &"wall_bolt":
+			continue
+		if not state.trap_is_armed(candidate["id"]):
+			continue
+		var c: Vector2i = candidate["cell"]
+		# 던질 자리(왼쪽 3칸)가 통행 가능해야 한다
+		if def.is_walkable(c) and def.is_walkable(c + Vector2i(-3, 0)) 				and def.is_walkable(c + Vector2i(-2, 0)) and def.is_walkable(c + Vector2i(-1, 0)):
+			trap = candidate
+			break
+	t.assert_true(not trap.is_empty(), "테스트 전제: 무장된 wall_bolt와 던질 공간이 있어야 한다")
+	if trap.is_empty():
+		return
+
+	var cell: Vector2i = trap["cell"]
+	# ★ 함정 **바로 위가 아니라 3칸 앞**에서 던진다. 그래야 "지나가며 터뜨리는지"를 본다.
+	player.global_position = Vector2(
+		(cell.x - 3) * CELL + CELL / 2.0, cell.y * CELL + CELL / 2.0)
+	player.facing = Vector2.RIGHT
+	await tree.physics_frame
+
+	t.assert_true(not state.trap_has_fired(trap["id"]), "테스트 전제: 아직 발동 전")
+
+	Input.action_press("throw_item")
+	await tree.physics_frame
+	Input.action_release("throw_item")
+	for i in 90:
+		await tree.physics_frame
+		if state.trap_has_fired(trap["id"]):
+			break
+
+	t.assert_true(state.trap_has_fired(trap["id"]),
+		"던진 돌이 날아가며 함정을 터뜨려야 한다 (FLR-028 원작 공략) — 함정 `%s`" % trap["id"])
+	t.assert_true(not state.trap_is_armed(trap["id"]),
+		"발사형이므로 무장이 풀려야 한다 (FLR-012)")
+
+	# ★ 그 결과 공략이 성립한다 — 이제 걸어서 지나가도 안전하다
+	for i in 30:
+		await tree.physics_frame
+	var before_walk: float = player.combatant.vitality
+	player.global_position = Vector2(cell.x * CELL + CELL / 2.0, cell.y * CELL + CELL / 2.0)
+	for i in 10:
+		await tree.physics_frame
+	t.assert_almost_eq(player.combatant.vitality, before_walk,
+		"먼저 터뜨린 함정 위는 안전해야 한다 — 공략이 성립해야 한다", 0.0001)
 
 
 ## 적도 공격한다 — 일방적으로 맞기만 하면 전투가 아니다.
