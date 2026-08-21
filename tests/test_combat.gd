@@ -14,7 +14,7 @@ extends RefCounted
 ##
 ## GDScript의 런타임 스크립트 에러는 **그 함수만** 중단시키고 `run()`은 계속 진행한다.
 ## 하한을 못박아 두면 그렇게 사라진 단언이 실패로 드러난다.
-const MIN_ASSERTIONS := 62
+const MIN_ASSERTIONS := 70
 
 
 func run(t: TestCase) -> void:
@@ -33,6 +33,7 @@ func run(t: TestCase) -> void:
 	_test_strike_applies_damage_once(t)
 	_test_combat_state_roundtrip(t)
 	_test_time_scale(t)
+	_test_projectile_sweeps_path(t)
 	t.done()
 
 
@@ -469,6 +470,47 @@ func _test_time_scale(t: TestCase) -> void:
 	var src := FileAccess.get_file_as_string("res://scripts/world/time_scale.gd")
 	t.assert_true(not _code_only(src).contains("Engine.time_scale"),
 		"엔진 배속을 건드리면 물리·입력·UI가 함께 느려진다")
+
+
+## ★ 투사체가 **빠르게 날아도 칸을 건너뛰지 않는다.**
+##
+## 오너가 발견한 두 번째 버그다 (2026-08-21). 한 프레임 이동량이 한 칸보다 크면
+## 그 칸을 통째로 뛰어넘는다 — 물리 터널링과 같다.
+## 실제로 `21 → 23 → 25`로 날며 **함정이 있는 24번 칸을 그냥 지나쳤다.**
+##
+## 프레임률에 따라 결과가 달라지면 `CBT-001`(반실시간)에 어긋난다.
+func _test_projectile_sweeps_path(t: TestCase) -> void:
+	var p := ThrownObject.new()
+
+	# 한 칸(32px)보다 훨씬 큰 이동 — 낮은 프레임률에서 실제로 생긴다.
+	var far := p._cells_between(Vector2(16, 16), Vector2(16 + 32 * 5, 16))
+	t.assert_eq(far.size(), 5, "5칸을 지나면 5칸이 다 나와야 한다 (실제 %d)" % far.size())
+	for i in far.size():
+		t.assert_eq(far[i], Vector2i(1 + i + 0, 0) + Vector2i(0, 0),
+			"칸이 순서대로 연속이어야 한다 — 건너뛰면 함정을 지나친다")
+
+	# 아주 작은 이동은 같은 칸이면 빈 배열
+	t.assert_eq(p._cells_between(Vector2(16, 16), Vector2(18, 16)).size(), 0,
+		"같은 칸 안에서 움직이면 새 칸이 없다")
+
+	# 대각선도 건너뛰지 않는다
+	var diag := p._cells_between(Vector2(16, 16), Vector2(16 + 32 * 3, 16 + 32 * 3))
+	t.assert_true(diag.size() >= 3,
+		"대각 이동도 지나간 칸이 빠지면 안 된다 (실제 %d)" % diag.size())
+
+	# 프레임률이 달라도 같은 칸 집합을 지나야 한다
+	var coarse := p._cells_between(Vector2(16, 16), Vector2(16 + 32 * 8, 16))
+	var fine: Array[Vector2i] = []
+	var prev := Vector2(16, 16)
+	for i in 16:
+		var nxt := Vector2(16 + 32 * 8 * (i + 1) / 16.0, 16)
+		for c in p._cells_between(prev, nxt):
+			if not fine.has(c):
+				fine.append(c)
+		prev = nxt
+	t.assert_eq(coarse, fine,
+		"프레임률이 달라도 같은 칸을 지나야 한다 (CBT-001 반실시간)")
+	p.free()
 
 
 func _code_only(src: String) -> String:

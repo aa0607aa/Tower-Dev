@@ -135,4 +135,21 @@ static func envelope_from_floor(owner_id: StringName, def: FloorDefinition) -> A
 	for cell in def.sorted_walkable_cells():
 		if not env.contains(WorldAnchor.new(def.world_id, def.world_region_ref, cell, 0)):
 			env.allow_cell(cell)
+
+	# ## 사각형 안의 **구조물 칸을 도로 뺀다** (2026-08-21)
+	# `allow_rect()`는 방 사각형을 통째로 허용하는데, `blocks`로 파낸 기둥·칸막이가
+	# 그 안에 있다. 그대로 두면 **허용 영역이 통행 가능 칸보다 커진다.**
+	#
+	# 오너가 플레이에서 발견했다 — "투사체가 벽을 뚫어".
+	# 투사체가 경계만 보고 날다가 기둥을 통과했다.
+	#
+	# 이 함수의 계약은 문서 그대로 "1층은 **걸을 수 있는 곳 전부**가 허용 영역"이다.
+	# 사각형보다 크면 계약을 어기는 것이다.
+	for space in def.spaces:
+		var rect: Rect2i = space["rect"]
+		for y in range(rect.position.y, rect.position.y + rect.size.y):
+			for x in range(rect.position.x, rect.position.x + rect.size.x):
+				var c := Vector2i(x, y)
+				if not def.is_walkable(c):
+					env.deny_cell(c)
 	return env

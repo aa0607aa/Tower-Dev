@@ -53,29 +53,45 @@ func tick(world_delta: float) -> bool:
 	var step := direction * SPEED * world_delta
 	var next := global_position + step
 
-	# 행동 반경 밖으로는 나가지 못한다 — 유배자 인과다 (`D-017` 4항).
-	if envelope != null and not AccessService.can_body_enter(envelope, next):
-		_land(global_position)
-		return true
+	# ## 지나간 칸을 **전부** 훑는다
+	# 한 프레임 이동량이 한 칸보다 크면 그 칸을 통째로 뛰어넘는다 — 물리 터널링과 같다.
+	# 실제로 그랬다: 420px/s 로 날면서 `21 → 23 → 25` 로 건너뛰어
+	# **함정이 있는 24번 칸을 그냥 지나쳤다** (오너 발견, 2026-08-21).
+	#
+	# 끝점만 보면 프레임률에 따라 결과가 달라진다 — `CBT-001`(반실시간)에 어긋난다.
+	# 그래서 시작점과 끝점 사이의 칸을 순서대로 본다.
+	for cell in _cells_between(global_position, next):
+		var cell_center := Vector2(cell.x * TrapSensor.CELL + TrapSensor.CELL / 2.0,
+			cell.y * TrapSensor.CELL + TrapSensor.CELL / 2.0)
+
+		# ## 지형에 막힌다 — **물리적 벽**이다
+		# 경계(`AccessEnvelope`)만 보고 날면 안 된다. 경계는 `FLR-024`의 **인과 제약**이지
+		# 물리 벽이 아니다. 둘을 같은 것으로 쓰면 한쪽이 어긋날 때 조용히 통과한다.
+		if trap_sensor != null and trap_sensor.definition != null 				and not trap_sensor.definition.is_walkable(cell):
+			_land(global_position)
+			return true
+
+		# 행동 반경 밖으로는 나가지 못한다 — 유배자 인과다 (`D-017` 4항).
+		# 지형과 **별개 판정**이다.
+		if envelope != null and not AccessService.can_body_enter(envelope, cell_center):
+			_land(global_position)
+			return true
+
+		if cell == _last_cell:
+			continue
+		_last_cell = cell
+		if trap_sensor == null:
+			continue
+		# 감지부를 건드렸으면 거기서 멈춘다 — 실선이나 압력판을 치고 계속 날아가지 않는다.
+		var fired := trap_sensor.sense_impact(cell_center, MASS,
+			CausalSource.new(thrower_id, CausalSource.Kind.THROWN))
+		if not fired.is_empty():
+			global_position = cell_center
+			_land(cell_center)
+			return true
 
 	global_position = next
 	_travelled += step.length()
-
-	# ## 지나가는 칸마다 자극을 낸다
-	# 전에는 **착지 지점에서만** 자극을 냈다. 그래서 함정 칸 위를 그냥 날아서 지나가고
-	# 사거리 끝에 떨어졌다 — `FLR-028`의 원작 공략("함정을 향해 돌을 던진다")이
-	# 정작 되지 않았다. 오너가 플레이에서 발견했다 (2026-08-21).
-	#
-	# 감지부를 건드렸으면 거기서 멈춘다. 돌이 실선이나 압력판을 치고 계속 날아가지 않는다.
-	var cell := TrapSensor.cell_of(global_position)
-	if cell != _last_cell:
-		_last_cell = cell
-		if trap_sensor != null:
-			var fired := trap_sensor.sense_impact(global_position, MASS,
-				CausalSource.new(thrower_id, CausalSource.Kind.THROWN))
-			if not fired.is_empty():
-				_land(global_position)
-				return true
 
 	# 대상에 맞았는가 — 공간 판정이다 (`CBT-008`, 굴림 없음).
 	if _hit_target():
@@ -85,6 +101,25 @@ func tick(world_delta: float) -> bool:
 		_land(global_position)
 		return true
 	return false
+
+
+## 두 점 사이에 **실제로 지나간 칸들**을 순서대로 돌려준다.
+##
+## 셀 절반 간격으로 샘플링해 건너뛰지 않게 한다. 시작 칸은 포함하지 않는다 —
+## 이미 지난 프레임에 처리했다.
+func _cells_between(from: Vector2, to: Vector2) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	var distance := from.distance_to(to)
+	if distance <= 0.0:
+		return out
+	var steps := maxi(1, ceili(distance / (TrapSensor.CELL * 0.5)))
+	var last := TrapSensor.cell_of(from)
+	for i in range(1, steps + 1):
+		var c := TrapSensor.cell_of(from.lerp(to, float(i) / float(steps)))
+		if c != last:
+			out.append(c)
+			last = c
+	return out
 
 
 func _hit_target() -> bool:
