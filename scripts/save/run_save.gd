@@ -16,8 +16,9 @@ extends RefCounted
 ## `durability_grade`(등급) + `durability_points`(수치)로 나뉘었다 (`P3-REV-004`).
 ## 옛 v1 세이브를 그대로 읽으면 **등급이 빈 값으로 뭉개진다** — 조용히 잘못 읽느니
 ## `VERSION_MISMATCH`로 알린다. 출시 전이라 migration을 만들 이유가 없다.
-## v1 호환이 필요해지면 여기에 **명시적 migration**을 만든다.
-const SAVE_VERSION := 2
+## `v2 → v3` (`PHASE 4`): 전투 상태(`combatants`)가 추가됐다.
+## v1/v2 호환이 필요해지면 여기에 **명시적 migration**을 만든다.
+const SAVE_VERSION := 3
 
 
 static func to_dict(run: RunState) -> Dictionary:
@@ -68,6 +69,10 @@ static func from_text(text: String, defs: Dictionary) -> Dictionary:
 		if wd.has("terrain"):
 			world.terrain = TerrainMutationState.from_save_dict(wd["terrain"])
 
+		# 적 전투 상태 (`PHASE 4`). 월드 공유다.
+		for cid in wd.get("combatants", {}):
+			world.combatants[StringName(cid)] = Combatant.from_save_dict(wd["combatants"][cid])
+
 		for entry in wd.get("ground_items", []):
 			world.put_ground_item(
 				ItemInstance.from_save_dict(entry["instance"]),
@@ -79,6 +84,10 @@ static func from_text(text: String, defs: Dictionary) -> Dictionary:
 	for eid in exile_ids:
 		for item_d in inventories[eid]:
 			run.add_to_inventory(StringName(eid), ItemInstance.from_save_dict(item_d))
+
+	# 유배자 전투 상태 — 층을 넘어 따라간다.
+	for eid in d.get("combatants", {}):
+		run.combatants[StringName(eid)] = Combatant.from_save_dict(d["combatants"][eid])
 
 	return {"status": status, "run": run}
 

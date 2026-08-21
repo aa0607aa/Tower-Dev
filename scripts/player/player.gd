@@ -31,6 +31,23 @@ const BASE_SPEED := 160.0
 ## 중심이 마지막 허용 셀에 있어도 옆면이 경계를 넘으면 밖의 물체에 닿는다.
 var _half_extent := Vector2.ZERO
 
+## 대시 (`PHASE 4`). **DESIGN 수치** — 손맛은 `4-2` PLAYTEST로 결정된다.
+const DASH_SPEED := 420.0
+const DASH_DURATION := 0.14
+const DASH_COOLDOWN := 0.55
+
+## 전투 상태. `Main`이 넣어준다 — 플레이어 노드가 스스로 만들면
+## 세이브/로드 때 `RunState`의 것과 두 벌이 된다.
+var combatant: Combatant = null
+var attack_state := AttackState.new()
+
+## 마지막으로 바라본 방향. 멈춰 있어도 그쪽으로 휘두른다.
+var facing := Vector2.RIGHT
+
+var _dash_left := 0.0
+var _dash_cooldown := 0.0
+var _dash_direction := Vector2.ZERO
+
 ## 이 유배자의 행동 반경 (`FLR-017` `FLR-024`). 없으면 경계 없이 움직인다.
 ##
 ## 지형 충돌과 **별개**다 — 지형은 물리 벽이고 이것은 탑의 인과 제약이다.
@@ -44,9 +61,80 @@ func _ready() -> void:
 		_half_extent = (shape_node.shape as RectangleShape2D).size * 0.5
 
 
+func get_combatant() -> Combatant:
+	return combatant
+
+
+## 공격 중이거나 후딜 중인가 — `Main`이 상호작용을 막는 데 쓴다.
+func is_attacking() -> bool:
+	return attack_state.is_busy()
+
+
+## 공격을 시작한다. 성공하면 `true`.
+##
+## 연타로 선딜을 건너뛸 수 없다 (`CBT-008` — `AttackState`가 막는다).
+func try_attack() -> bool:
+	if combatant == null or not combatant.alive:
+		return false
+	var w := combatant.weapon()
+	if w == null:
+		return false
+	return attack_state.start(w, facing)
+
+
+## 대시를 시작한다. 쿨다운 중이면 `false`.
+func try_dash() -> bool:
+	if _dash_cooldown > 0.0 or _dash_left > 0.0:
+		return false
+	if combatant != null and not combatant.alive:
+		return false
+	# 후딜 중에는 대시로 빠져나갈 수 없다 — 그러면 후딜이 무의미해진다.
+	if attack_state.phase == AttackState.Phase.RECOVERY:
+		return false
+	_dash_direction = facing
+	_dash_left = DASH_DURATION
+	return true
+
+
+func is_dashing() -> bool:
+	return _dash_left > 0.0
+
+
+## 월드 시간으로 전투 상태를 진행한다. 새로 유효 구간에 들어갔으면 `true`.
+##
+## `_physics_process`의 delta를 그대로 쓰지 않는다 — 전술 정지 중에
+## 공격만 진행되면 정지가 의미가 없다 (`CBT-001` `CBT-002`).
+func advance_combat(world_delta: float) -> bool:
+	if world_delta <= 0.0:
+		return false
+	_dash_left = maxf(0.0, _dash_left - world_delta)
+	if _dash_left <= 0.0 and _dash_cooldown > 0.0:
+		_dash_cooldown = maxf(0.0, _dash_cooldown - world_delta)
+	if is_zero_approx(_dash_left) and _dash_direction != Vector2.ZERO:
+		_dash_direction = Vector2.ZERO
+		_dash_cooldown = DASH_COOLDOWN
+	return attack_state.advance(world_delta)
+
+
 func _physics_process(delta: float) -> void:
 	var raw := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	velocity = Movement.desired_velocity(raw, BASE_SPEED)
+	if raw.length() > 0.0:
+		facing = raw.normalized()
+
+	if combatant != null and not combatant.alive:
+		velocity = Vector2.ZERO
+		move_and_slide()
+		return
+
+	if _dash_left > 0.0:
+		# 대시 중에는 입력 방향이 아니라 **시작할 때 정한 방향**으로 간다.
+		# 도중에 꺾이면 회피 거리가 예측 불가능해진다.
+		velocity = _dash_direction * DASH_SPEED
+	elif attack_state.phase == AttackState.Phase.RECOVERY:
+		# 후딜 중에는 움직이지 못한다 (`CBT-008` — 후딜에 무게가 있어야 한다).
+		velocity = Vector2.ZERO
+	else:
+		velocity = Movement.desired_velocity(raw, BASE_SPEED)
 
 	var before := global_position
 

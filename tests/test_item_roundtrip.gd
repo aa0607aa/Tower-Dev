@@ -209,7 +209,9 @@ func _test_drop_is_transactional(t: TestCase, def: FloorDefinition) -> void:
 ## `ItemInstance`가 `durability: int` → `durability_grade`/`points`로 바뀌었다.
 ## v1을 그대로 읽으면 **등급이 빈 값으로 뭉개진다** — 잘못 읽느니 알린다.
 func _test_save_version_rejects_old(t: TestCase, def: FloorDefinition, defs: Dictionary) -> void:
-	t.assert_eq(RunSave.SAVE_VERSION, 2, "스키마가 바뀌었으므로 버전이 올라가야 한다")
+	# 스키마가 바뀔 때마다 올라간다. v2 = durability 분리, v3 = 전투 상태 추가.
+	t.assert_true(RunSave.SAVE_VERSION >= 2,
+		"스키마가 바뀌었으므로 버전이 올라가야 한다 (현재 %d)" % RunSave.SAVE_VERSION)
 
 	var run := RunState.new(5)
 	run.ensure_world(def.world_id)
@@ -217,7 +219,8 @@ func _test_save_version_rejects_old(t: TestCase, def: FloorDefinition, defs: Dic
 	t.assert_eq(int(RunSave.from_text(current, defs)["status"]),
 		int(FloorSave.LoadStatus.OK), "현재 버전은 정상 로드돼야 한다")
 
-	var old_text := current.replace('"save_version": 2', '"save_version": 1')
+	var old_text := current.replace(
+		'"save_version": %d' % RunSave.SAVE_VERSION, '"save_version": 1')
 	var r := RunSave.from_text(old_text, defs)
 	t.assert_eq(int(r["status"]), int(FloorSave.LoadStatus.VERSION_MISMATCH),
 		"v1 세이브는 VERSION_MISMATCH로 알려야 한다")

@@ -41,10 +41,22 @@ var ground_items: Dictionary = {}
 ## 열매 효과 월드 선결정 (`ITM-002`). MVP 범위 밖 — 그릇만 둔다.
 var fruit_effects: Dictionary = {}
 
+## `combatant_id → Combatant`. **월드 공유다** (`FLR-024`) —
+## 같은 좌표를 보는 유배자 둘이 다른 적을 보면 "실제 월드의 일부"가 깨진다.
+## 유배자 본인의 전투 상태는 여기가 아니라 `RunState`에 있다.
+var combatants: Dictionary = {}
+
 
 func _init(p_world_id: StringName = &"") -> void:
 	world_id = p_world_id
 	terrain = TerrainMutationState.new()
+
+
+## 이 월드의 전투 개체. 없으면 만든다.
+func ensure_combatant(combatant_id: StringName) -> Combatant:
+	if not combatants.has(combatant_id):
+		combatants[combatant_id] = Combatant.new(combatant_id)
+	return combatants[combatant_id]
 
 
 func floor_state(floor_id: StringName) -> FloorState:
@@ -132,8 +144,15 @@ func to_save_dict() -> Dictionary:
 			"anchor": (e["anchor"] as WorldAnchor).to_save_dict(),
 		})
 
+	var combat_ids: Array = combatants.keys()
+	combat_ids.sort_custom(func(a: Variant, b: Variant) -> bool: return String(a) < String(b))
+	var combat_out := {}
+	for cid in combat_ids:
+		combat_out[String(cid)] = (combatants[cid] as Combatant).to_save_dict()
+
 	return {
 		"world_id": String(world_id),
+		"combatants": combat_out,
 		"floors": floor_out,
 		"terrain": terrain.to_save_dict() if terrain != null else {},
 		"ground_items": items_out,

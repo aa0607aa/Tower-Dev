@@ -50,6 +50,16 @@ const EXILE_MASS := 70.0
 ## 물리 사건 → 함정 자극 어댑터 (`P3-REV-008`). 마지막 칸 기억도 여기 있다.
 var _trap_sensor: TrapSensor
 
+## 월드 시간 배속 (`CBT-001` `CBT-002`). 전투·함정·NPC가 전부 이 값을 거친다.
+var _time := TimeScale.new()
+## 살아 있는 적들. `PHASE 7`의 NPC 본체가 오면 그쪽으로 옮긴다.
+var _enemies: Array[Enemy] = []
+## 날아가는 중인 물체들.
+var _projectiles: Array[ThrownObject] = []
+## 전투 알림 (피격·처치). 발동 사실은 숨기지 않는다 — 이미 겪은 일이다.
+var _combat_notice := ""
+var _combat_notice_until := 0
+
 
 func _ready() -> void:
 	_floor_def = FloorDefinitionLoader.load_from_file()
@@ -84,8 +94,14 @@ func _ready() -> void:
 	_floor_state.party_stairs.append(StairResolver.new().resolve_from(
 		_floor_def, _player.access_envelope, &"party_1", RUN_SEED, start))
 
-	# 함정 감지 어댑터. 플레이어도 던진 물체도 이걸 통해서만 자극을 만든다.
+	# 함정 감지 어댑터. 플레이어도 던진 물체도 적도 이걸 통해서만 자극을 만든다.
 	_trap_sensor = TrapSensor.new(_floor_def, _floor_state, _player.access_envelope)
+
+	# 유배자의 전투 상태. `RunState`가 소유한다 — 층을 넘어 따라가야 하므로
+	# `FloorState`에 두면 계단을 오를 때 사라진다 (`WLD-003`).
+	_player.combatant = _run.ensure_combatant(EXILE_ID)
+
+	_spawn_enemies()
 
 	# 파밍 결과를 바닥에 실체화한다 (`P3-T3`). 멱등하므로 로드 후 다시 불러도 복제되지 않는다.
 	var materialized := ItemService.materialize_floor_loot(_world, _floor_def, _floor_state)
@@ -129,15 +145,153 @@ func _ready() -> void:
 	_debug_overlay.state = _floor_state
 	add_child(_debug_overlay)
 
-	_status_label.text = "「탑」 1층 (greybox) — 공간 %d · 긴 축 %d타일 · 함정 %d · 파밍 %d\nWASD/방향키: 이동   E: 줍기   Q: 버리기   F1: 개발용 표시   ESC: 종료" % [
+	_status_label.text = "「탑」 1층 (greybox) — 공간 %d · 긴 축 %d타일 · 함정 %d · 파밍 %d\nWASD: 이동  E: 줍기  Q: 버리기  좌클릭/J: 공격  Shift: 대시  F: 던지기  Tab: 정지  F1: 개발용  ESC: 종료" % [
 		_floor_def.spaces.size(), _floor_def.long_axis(),
 		_floor_def.traps.size(), _floor_def.loot_points.size(),
 	]
 
 
-func _process(_delta: float) -> void:
+## `FloorDefinition.spawn_points`에 적을 세운다.
+##
+## `FLR-002` — 스폰 **지점**은 고정이고 무엇이 서는지는 시드가 정한다.
+## `CHR-010`(랜덤 유배자 생성 규칙)이 TBD이므로 지금은 **동일한 최소 개체**만 세운다.
+## 여기서 출신·성격·스탯 분포를 만들면 TBD를 몰래 확정하는 것이 된다.
+func _spawn_enemies() -> void:
+	for point in _floor_def.spawn_points:
+		var spawn_id: StringName = point["id"]
+		var entry: Dictionary = _floor_state.spawns.get(spawn_id, {})
+		if not bool(entry.get("alive", true)):
+			continue
+
+		var e := Enemy.new()
+		e.name = "Enemy_%s" % spawn_id
+		e.combatant = _world.ensure_combatant(StringName(entry.get("npc_id", spawn_id)))
+		e.trap_sensor = _trap_sensor
+		e.target = _player
+		add_child(e)
+		var cell: Vector2i = point["cell"]
+		e.global_position = Vector2(cell.x * CELL + CELL / 2.0, cell.y * CELL + CELL / 2.0)
+		_enemies.append(e)
+	GameLog.info("Main", "적 %d체 배치" % _enemies.size())
+
+
+## 지금 살아 있는 전투 대상들. 공격 판정과 투사체가 함께 쓴다.
+func _enemy_targets() -> Dictionary:
+	var out := {}
+	for e in _enemies:
+		if e == null or not is_instance_valid(e) or e.combatant == null:
+			continue
+		if not e.combatant.alive:
+			continue
+		out[e.combatant.id] = {"position": e.global_position, "combatant": e.combatant}
+	return out
+
+
+func _process(delta: float) -> void:
+	_poll_combat_input()
 	_refresh_interaction_prompt()
 	_check_trap_underfoot()
+	_advance_combat(delta)
+
+
+## 전투 입력은 **폴링한다.** 이동(`Input.get_vector`)과 같은 방식이다.
+##
+## `_unhandled_input`은 실제 `InputEvent`가 전파돼야 도는데, 자동 테스트가 쓰는
+## `Input.action_press()`는 **상태만 바꾸고 이벤트를 만들지 않는다.**
+## 그래서 이벤트 기반으로 두면 실제 게임에서만 동작하고 E2E로는 검증할 수 없다 —
+## `P3-REV-005`("게임 경로에만 있는 버그")와 정확히 같은 함정이다.
+##
+## 액션 게임에서 폴링은 관용적이기도 하다. ESC·F1 같은 UI성 입력만 이벤트로 남긴다.
+func _poll_combat_input() -> void:
+	if _player == null:
+		return
+
+	# `CBT-001` — 전술 정지. 설정서가 **결과로** 확정한 항목이다.
+	# 정지 중에도 이 입력만은 받아야 풀 수 있다.
+	if Input.is_action_just_pressed("tactical_pause"):
+		if _time.is_paused():
+			_time.resume()
+		else:
+			_time.pause()
+		GameLog.info("Main", "월드 시간 %s" % ("정지" if _time.is_paused() else "재개"))
+		return
+
+	# 정지 중에는 다른 행동이 나가지 않는다 — 나가면 정지가 무적 시간이 된다.
+	if _time.is_paused():
+		return
+
+	if Input.is_action_just_pressed("attack"):
+		_player.try_attack()
+	if Input.is_action_just_pressed("dash"):
+		_player.try_dash()
+	if Input.is_action_just_pressed("throw_item"):
+		_on_throw()
+
+
+## 전투 한 틱. **모든 시간이 `TimeScale`을 거친다** (`CBT-001` `CBT-002`).
+func _advance_combat(engine_delta: float) -> void:
+	var world_delta := _time.world_delta(engine_delta)
+	if world_delta <= 0.0:
+		return
+
+	# 플레이어 공격 진행 — 유효 구간에 들어가면 그 자리에서 판정한다.
+	if _player.advance_combat(world_delta):
+		_resolve_player_hits()
+
+	for e in _enemies:
+		if e == null or not is_instance_valid(e):
+			continue
+		var r := e.tick(world_delta)
+		e.move(world_delta)
+		var hit: Dictionary = r.get("hit", {})
+		if not hit.is_empty() and float(hit.get("damage", 0.0)) > 0.0:
+			_on_player_hurt(hit)
+
+	for p in _projectiles.duplicate():
+		if p == null or not is_instance_valid(p):
+			_projectiles.erase(p)
+			continue
+		if p.tick(world_delta):
+			_projectiles.erase(p)
+
+
+## 플레이어의 유효 구간 타격. 판정은 전부 `CombatService`가 한다.
+func _resolve_player_hits() -> void:
+	var c: Combatant = _player.combatant
+	if c == null or not c.alive:
+		return
+	var w := c.weapon()
+	if w == null:
+		return
+	var targets := _enemy_targets()
+	for id in CombatService.targets_in_arc(
+			_player.global_position, _player.attack_state, w, targets):
+		var entry: Dictionary = targets[id]
+		var r := CombatService.strike(c, _player.global_position, _player.attack_state,
+			id, entry["combatant"], entry["position"])
+		if float(r["damage"]) <= 0.0:
+			continue
+		var suffix := ""
+		if bool(r["critical"]):
+			suffix = " [%s]" % ", ".join(r["critical_reasons"])
+		GameLog.info("Main", "타격 — %s %.1f%s%s" % [
+			id, float(r["damage"]), suffix, " (처치)" if bool(r["killed"]) else ""])
+		_notice("처치" if bool(r["killed"]) else "명중%s" % suffix)
+
+
+func _on_player_hurt(hit: Dictionary) -> void:
+	var c: Combatant = _player.combatant
+	GameLog.info("Main", "피격 — %.1f (남은 %.0f)" % [
+		float(hit.get("damage", 0.0)), c.vitality if c != null else 0.0])
+	if c != null and not c.alive:
+		_notice("쓰러졌다")
+	else:
+		_notice("피격")
+
+
+func _notice(text: String) -> void:
+	_combat_notice = text
+	_combat_notice_until = Time.get_ticks_msec() + 1500
 
 
 ## 유배자가 밟은 칸의 함정을 판정한다.
@@ -175,14 +329,20 @@ func _refresh_interaction_prompt() -> void:
 	var target := InteractionService.best(
 		_floor_def, _world, _player.access_envelope, _player_cell())
 	var carried := _run.inventory(EXILE_ID).size()
+	if not _combat_notice.is_empty() and Time.get_ticks_msec() >= _combat_notice_until:
+		_combat_notice = ""
 	var text := ""
 	if not _fired_notice.is_empty():
 		if Time.get_ticks_msec() < _fired_notice_until:
 			text = _fired_notice
 		else:
 			_fired_notice = ""
+	if text.is_empty() and not _combat_notice.is_empty():
+		text = _combat_notice
 	if text.is_empty() and not target.is_empty():
 		text = "[E] %s" % target["label"]
+	if _time.is_paused():
+		text = "— 정지 —   " + text
 	if carried > 0:
 		# 개수만 말한다. 무엇을 들고 있는지 표시하는 것은 인벤토리 UI(PHASE 3 후반)의 일이다.
 		text += ("   " if not text.is_empty() else "") + "소지품 %d   [Q] 버리기" % carried
@@ -222,6 +382,25 @@ func _on_interact() -> void:
 	if ItemService.pick_up(_run, _world, _floor_state, EXILE_ID, target["id"]):
 		GameLog.info("Main", "주움 — `%s`" % target["id"])
 		_ground_view.refresh()
+
+
+## 던지기. `FLR-028`의 "돌로 함정 먼저 터뜨리기" 공략이 여기서 성립한다.
+##
+## 투사체는 **자기 자극을 만들지 않는다** — 착지 위치를 `TrapSensor`에 넘길 뿐이다.
+func _on_throw() -> void:
+	if _player.combatant == null or not _player.combatant.alive:
+		return
+	var p := ThrownObject.new()
+	p.direction = _player.facing
+	p.thrower_id = EXILE_ID
+	p.thrower = _player.combatant
+	p.trap_sensor = _trap_sensor
+	p.envelope = _player.access_envelope
+	p.target_provider = _enemy_targets
+	add_child(p)
+	p.global_position = _player.global_position + _player.facing * 14.0
+	_projectiles.append(p)
+	GameLog.info("Main", "던짐 — %v 방향" % _player.facing)
 
 
 ## 버리기. **선 것 자리에 놓인다** — 원래 파밍 지점으로 돌아가지 않는다 (`P3-T3`).

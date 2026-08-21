@@ -27,6 +27,10 @@ var worlds: Dictionary = {}
 ## `exile_id → Array[ItemInstance]`. 층을 넘어 따라간다.
 var inventories: Dictionary = {}
 
+## `exile_id → Combatant`. **층을 넘어 따라간다** (`PHASE 4`).
+## `FloorState`에 두면 계단을 오를 때 체력이 초기화된다.
+var combatants: Dictionary = {}
+
 
 func _init(p_run_seed: int = 0) -> void:
 	run_seed = p_run_seed
@@ -47,6 +51,13 @@ func ensure_world(world_id: StringName) -> WorldState:
 ## 전에는 여기서 빈 배열을 만들어 넣었다. 그러면 **인벤토리를 들여다보기만 해도
 ## 세이브가 달라진다** — 실제로 "실패한 버리기가 상태를 바꾸면 안 된다" 테스트가 이걸 잡았다.
 ## 조회가 상태를 바꾸면 저장 비교로 부작용을 검출할 수 없게 된다 (`SYS-003`).
+## 유배자의 전투 상태. 없으면 만든다.
+func ensure_combatant(exile_id: StringName) -> Combatant:
+	if not combatants.has(exile_id):
+		combatants[exile_id] = Combatant.new(exile_id)
+	return combatants[exile_id]
+
+
 func inventory(exile_id: StringName) -> Array:
 	return inventories.get(exile_id, [])
 
@@ -96,8 +107,15 @@ func to_save_dict() -> Dictionary:
 			arr.append((it as ItemInstance).to_save_dict())
 		inv_out[String(eid)] = arr
 
+	var combat_ids: Array = combatants.keys()
+	combat_ids.sort_custom(func(a: Variant, b: Variant) -> bool: return String(a) < String(b))
+	var combat_out := {}
+	for cid in combat_ids:
+		combat_out[String(cid)] = (combatants[cid] as Combatant).to_save_dict()
+
 	return {
 		"run_seed": run_seed,
 		"worlds": worlds_out,
 		"inventories": inv_out,
+		"combatants": combat_out,
 	}
