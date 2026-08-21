@@ -61,3 +61,44 @@ func _to_string() -> String:
 	if not is_exile_caused():
 		return "CausalSource(independent)"
 	return "CausalSource(%s, %s)" % [exile_owner_id, Kind.keys()[kind]]
+
+
+## 저장 형식. `enum`은 정수라 값이 바뀌면 옛 세이브가 조용히 다른 종류가 된다 —
+## **이름으로** 저장한다 (`P3-REV-002`).
+func to_save_dict() -> Dictionary:
+	return {
+		"exile_owner_id": String(exile_owner_id),
+		"kind": kind_to_string(kind),
+	}
+
+
+static func from_save_dict(d: Dictionary) -> CausalSource:
+	return CausalSource.new(
+		StringName(d.get("exile_owner_id", String(NO_OWNER))),
+		kind_from_string(String(d.get("kind", "independent"))))
+
+
+static func kind_to_string(k: Kind) -> String:
+	match k:
+		Kind.BODY: return "body"
+		Kind.SUMMON: return "summon"
+		Kind.PROJECTILE: return "projectile"
+		Kind.EFFECT: return "effect"
+		Kind.THROWN: return "thrown"
+		Kind.FORCED: return "forced"
+		Kind.INDEPENDENT: return "independent"
+	return "independent"
+
+
+static func kind_from_string(name: String) -> Kind:
+	match name:
+		"body": return Kind.BODY
+		"summon": return Kind.SUMMON
+		"projectile": return Kind.PROJECTILE
+		"effect": return Kind.EFFECT
+		"thrown": return Kind.THROWN
+		"forced": return Kind.FORCED
+		"independent": return Kind.INDEPENDENT
+	push_error("알 수 없는 CausalSource.Kind: %s" % name)
+	return Kind.INDEPENDENT
+

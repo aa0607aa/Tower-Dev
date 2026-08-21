@@ -56,8 +56,17 @@ func put_floor(state: FloorState) -> void:
 
 
 ## 물건을 이 월드의 바닥에 놓는다. **위치는 실제 놓인 곳**이다.
-func put_ground_item(instance: ItemInstance, anchor: WorldAnchor) -> void:
+##
+## 다른 월드의 좌표를 이 월드에 넣으면 주소가 거짓말이 된다 — 거부한다 (`P3-REV-003`).
+func put_ground_item(instance: ItemInstance, anchor: WorldAnchor) -> bool:
+	if instance == null or anchor == null:
+		return false
+	if anchor.world_id != world_id:
+		push_error("다른 월드의 앵커를 %s 에 넣을 수 없다 (앵커 월드 %s)"
+			% [world_id, anchor.world_id])
+		return false
 	ground_items[instance.instance_id] = {"instance": instance, "anchor": anchor}
+	return true
 
 
 ## 바닥에서 집어 든다. 없으면 `null`.
@@ -74,12 +83,33 @@ func ground_item_anchor(instance_id: StringName) -> WorldAnchor:
 	return e.get("anchor", null)
 
 
-## 이 칸에 놓여 있는 물건들. id 순으로 **결정적으로** 반환한다 (`SYS-003`).
-func ground_items_at(cell: Vector2i) -> Array[StringName]:
+## 이 **주소**에 놓여 있는 물건들. id 순으로 **결정적으로** 반환한다 (`SYS-003`).
+##
+## ## 왜 `cell`이 아니라 `WorldAnchor`인가 (`P3-REV-003`)
+## `WorldAnchor`는 `world/region/cell/layer` 전체가 주소다. `cell`만 보면
+## **다른 region이나 다른 layer의 같은 좌표 물건까지 잡힌다.**
+##
+## 1층은 region이 하나뿐이라 증상이 안 보이지만, `FLR-023`상 층은 더 넓은 월드의 일부이고
+## 2층 이후에는 같은 월드에 여러 region이 있다. 지금 고쳐두지 않으면
+## "옆 구역 바닥의 물건이 손에 잡히는" 버그가 그때 나타난다.
+func ground_items_here(at: WorldAnchor) -> Array[StringName]:
+	var out: Array[StringName] = []
+	if at == null:
+		return out
+	for id in ground_items:
+		var a: WorldAnchor = ground_items[id]["anchor"]
+		if a != null and a.equals(at):
+			out.append(id)
+	out.sort_custom(func(x: StringName, y: StringName) -> bool: return String(x) < String(y))
+	return out
+
+
+## 이 월드의 특정 region/layer에 있는 물건 전체. 표현 계층이 쓴다.
+func ground_items_in(region_id: StringName, layer: int = 0) -> Array[StringName]:
 	var out: Array[StringName] = []
 	for id in ground_items:
 		var a: WorldAnchor = ground_items[id]["anchor"]
-		if a != null and a.cell == cell:
+		if a != null and a.region_id == region_id and a.layer == layer:
 			out.append(id)
 	out.sort_custom(func(x: StringName, y: StringName) -> bool: return String(x) < String(y))
 	return out

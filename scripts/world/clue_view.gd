@@ -13,6 +13,11 @@ extends Node2D
 ##
 ## 유배자는 이걸 보고 **의심**할 수 있어야 하고, 무시하고 지나갈 수도 있어야 한다.
 ##
+## ## 흔적이 사라지는 기준 (`P3-REV-001`)
+## "터졌는가"가 아니라 **"위험이 남아 있는가"** 다. 발사형(`one_shot`)은 한 번 터지면
+## 무장이 풀리므로 흔적이 사라지지만, 함정 바닥처럼 **반복해서 걸리는 함정은
+## 발동 이력이 있어도 여전히 위험**하므로 흔적이 남아야 한다.
+##
 ## ## `DebugOverlay`와의 차이
 ## `DebugOverlay`는 함정 위치를 정확히 찍어준다 — 개발 도구이고 `SYS-005` 위반이다.
 ## 이것은 배포 가능한 표현이다. 단서가 있는 함정만, 주변에만, 흐리게 그린다.
@@ -56,8 +61,13 @@ func _draw() -> void:
 		var clues: Array = trap["clues"]
 		if clues.is_empty():
 			continue
-		# 이미 터진 함정의 흔적은 남기지 않는다 — 위험이 사라졌으므로.
-		if state != null and state.trap_has_fired(trap["id"]):
+		# 흔적을 지우는 기준은 "터졌는가"가 아니라 **"위험이 남아 있는가"** 다 (`P3-REV-001`).
+		#
+		# `FloorState.fire_trap()`은 `one_shot`이 아닌 함정의 `armed`를 **true로 유지**한다.
+		# 함정 바닥처럼 반복해서 걸리는 치명 함정이 그렇다. `fired`만 보고 지우면
+		# **첫 발동 이후 위험이 그대로인데 단서만 사라진다** — `FLR-011` 위반이다.
+		# 실제로 `TrapRuntime.should_fire()`는 그 함정을 다시 발동시킨다.
+		if state != null and not state.trap_is_armed(trap["id"]):
 			continue
 
 		_draw_traces(trap)

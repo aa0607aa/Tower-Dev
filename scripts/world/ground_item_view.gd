@@ -22,6 +22,10 @@ const MARK_COLOR := Color(0.86, 0.78, 0.42, 0.95)
 const MARK_EDGE := Color(0.18, 0.16, 0.12, 0.9)
 
 var world: WorldState = null
+## 이 뷰가 그리는 region/layer (`P3-REV-003`).
+## 비워두면 월드 전체를 그려 **다른 구역 바닥까지 보인다.**
+var region_id: StringName = &""
+var layer: int = 0
 
 
 func _ready() -> void:
@@ -36,9 +40,9 @@ func refresh() -> void:
 func _draw() -> void:
 	if world == null:
 		return
-	# 순회 순서가 그림에 영향을 주지 않지만, 결정적 순서를 유지해 디버그를 쉽게 한다.
-	var ids: Array = world.ground_items.keys()
-	ids.sort_custom(func(a: Variant, b: Variant) -> bool: return String(a) < String(b))
+	# 지금 보고 있는 region/layer만 그린다 (`P3-REV-003`).
+	# 순서는 결정적으로 유지해 디버그를 쉽게 한다.
+	var ids: Array = world.ground_items_in(region_id, layer)
 	for id in ids:
 		var anchor: WorldAnchor = world.ground_items[id]["anchor"]
 		if anchor == null:

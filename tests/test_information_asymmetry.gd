@@ -17,7 +17,8 @@ func run(t: TestCase) -> void:
 		return
 
 	_test_clue_view_does_not_pinpoint(t, def)
-	_test_clue_view_hides_fired(t, def)
+	_test_clue_hidden_only_when_disarmed(t, def)
+	_test_repeating_trap_keeps_clue(t, def)
 	_test_clue_traces_are_deterministic(t, def)
 	_test_views_do_not_render_clue_text(t)
 	_test_ground_view_does_not_distinguish_items(t)
@@ -51,11 +52,69 @@ func _test_clue_view_does_not_pinpoint(t: TestCase, def: FloorDefinition) -> voi
 	view.free()
 
 
-## 이미 터진 함정의 흔적은 남지 않는다 — 위험이 사라졌다.
-func _test_clue_view_hides_fired(t: TestCase, def: FloorDefinition) -> void:
-	var src := FileAccess.get_file_as_string("res://scripts/world/clue_view.gd")
-	t.assert_true(src.contains("trap_has_fired"),
-		"터진 함정의 흔적은 지워야 한다")
+## 흔적을 지우는 기준은 **"위험이 남아 있는가"** 다 (`P3-REV-001`).
+##
+## 전에는 `trap_has_fired`만 봤다. 그런데 `FloorState.fire_trap()`은 `one_shot`이 아닌
+## 함정의 `armed`를 true로 유지한다 — **반복해서 걸리는 치명 함정은 발동 이력이 있어도
+## 여전히 위험한데 단서만 사라졌다.** `FLR-011` 위반이었다.
+func _test_clue_hidden_only_when_disarmed(t: TestCase, def: FloorDefinition) -> void:
+	var code := _code_only(FileAccess.get_file_as_string("res://scripts/world/clue_view.gd"))
+	t.assert_true(code.contains("trap_is_armed"),
+		"흔적 표시 기준은 armed(위험 잔존)여야 한다")
+	t.assert_true(not code.contains("trap_has_fired"),
+		"발동 이력(fired)만으로 흔적을 지우면 반복형 함정의 위험이 숨겨진다")
+
+
+## ★ `P3-REV-001` — 반복형 치명 함정은 발동 뒤에도 단서가 남고, 다시 밟으면 또 걸린다.
+func _test_repeating_trap_keeps_clue(t: TestCase, def: FloorDefinition) -> void:
+	var repeating := {}
+	var one_shot := {}
+	for trap in def.traps:
+		if not bool(trap["lethal"]) or (trap["clues"] as Array).is_empty():
+			continue
+		if bool(trap["one_shot"]):
+			if one_shot.is_empty():
+				one_shot = trap
+		elif repeating.is_empty():
+			repeating = trap
+	t.assert_true(not repeating.is_empty(),
+		"테스트 전제: one_shot이 아닌 치명 함정이 있어야 한다 (반복형)")
+	t.assert_true(not one_shot.is_empty(), "테스트 전제: one_shot 치명 함정이 있어야 한다")
+	if repeating.is_empty() or one_shot.is_empty():
+		return
+
+	var state := FloorPopulator.populate(def, 4242)
+	var view := ClueView.new()
+	view.definition = def
+	view.state = state
+
+	# 반복형: 발동 → 여전히 armed → 흔적 유지 → 다시 밟으면 또 걸린다
+	var s1 := TrapStimulus.from_body(repeating["cell"], 70.0, &"player")
+	t.assert_true(TrapRuntime.trigger(repeating, state, s1), "반복형 함정이 발동해야 한다")
+	t.assert_true(state.trap_has_fired(repeating["id"]), "발동 이력이 남아야 한다")
+	t.assert_true(state.trap_is_armed(repeating["id"]),
+		"반복형 함정은 발동 뒤에도 무장 상태여야 한다 (FloorState.fire_trap)")
+	t.assert_true(_is_visible(view, repeating),
+		"위험이 남아 있으면 단서도 남아야 한다 (P3-REV-001 — FLR-011)")
+	t.assert_true(TrapRuntime.trigger(repeating, state, s1),
+		"재진입하면 다시 발동해야 한다 — 위험이 실재한다")
+
+	# 발사형: 발동 → 무장 해제 → 흔적 사라짐
+	var s2 := TrapStimulus.from_thrown(one_shot["cell"], 0.5, &"player")
+	t.assert_true(TrapRuntime.trigger(one_shot, state, s2), "발사형 함정이 발동해야 한다")
+	t.assert_true(not state.trap_is_armed(one_shot["id"]), "발사형은 무장이 풀려야 한다")
+	t.assert_true(not _is_visible(view, one_shot),
+		"위험이 사라진 함정의 흔적은 지워야 한다")
+	view.free()
+
+
+## `ClueView`가 이 함정의 흔적을 그리는가 — `_draw()`와 같은 조건을 재현한다.
+func _is_visible(view: ClueView, trap: Dictionary) -> bool:
+	if (trap["clues"] as Array).is_empty():
+		return false
+	if view.state != null and not view.state.trap_is_armed(trap["id"]):
+		return false
+	return not _trace_cells(view, trap).is_empty()
 
 
 ## 흔적 위치가 **결정적**이어야 한다.

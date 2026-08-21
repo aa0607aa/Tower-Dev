@@ -1,5 +1,5 @@
 extends Node2D
-## Main — PHASE 2 진행 중.
+## Main — PHASE 3까지 반영.
 ##
 ## 1층 고정 정의를 로드해 지형을 세우고 플레이어를 시작점에 놓는다.
 ## PHASE 1의 `TestRoom.tscn`은 폐기했다 — canon 지형이 아니었다 (`FLR-001`).
@@ -107,6 +107,8 @@ func _ready() -> void:
 	_ground_view = GroundItemView.new()
 	_ground_view.name = "GroundItems"
 	_ground_view.world = _world
+	# 지금 보고 있는 구역만 그린다 (`P3-REV-003`).
+	_ground_view.region_id = _floor_def.world_region_ref
 	add_child(_ground_view)
 	_ground_view.refresh()
 

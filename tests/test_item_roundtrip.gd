@@ -128,7 +128,7 @@ func _test_no_loss(t: TestCase, def: FloorDefinition) -> void:
 func _test_drop_outside_envelope_rejected(t: TestCase, def: FloorDefinition) -> void:
 	var run := RunState.new(1)
 	var world := run.ensure_world(def.world_id)
-	var item := ItemInstance.new(&"held", &"stone", &"misc", 0, &"")
+	var item := ItemInstance.new(&"held", &"stone", &"misc", &"", &"")
 	run.add_to_inventory(EXILE, item)
 
 	var env := AccessService.envelope_from_floor(&"player", def)

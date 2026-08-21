@@ -68,11 +68,11 @@ func _test_deterministic_selection(t: TestCase) -> void:
 	var envc := AccessService.envelope_from_floor(&"player", crowded)
 	var w := WorldState.new(&"w")
 	# 같은 칸에 둘, 대각에 하나
-	w.put_ground_item(ItemInstance.new(&"zzz_last", &"a", &"misc", 0, &""),
+	w.put_ground_item(ItemInstance.new(&"zzz_last", &"a", &"misc", &"", &""),
 		WorldAnchor.new(&"w", &"r", Vector2i(4, 4), 0))
-	w.put_ground_item(ItemInstance.new(&"aaa_first", &"b", &"misc", 0, &""),
+	w.put_ground_item(ItemInstance.new(&"aaa_first", &"b", &"misc", &"", &""),
 		WorldAnchor.new(&"w", &"r", Vector2i(4, 4), 0))
-	w.put_ground_item(ItemInstance.new(&"mmm_far", &"c", &"misc", 0, &""),
+	w.put_ground_item(ItemInstance.new(&"mmm_far", &"c", &"misc", &"", &""),
 		WorldAnchor.new(&"w", &"r", Vector2i(5, 5), 0))
 
 	var first := InteractionService.best(crowded, w, envc, Vector2i(4, 4))

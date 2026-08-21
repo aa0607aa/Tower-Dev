@@ -64,6 +64,48 @@ func to_sorted_records() -> Array:
 	return out
 
 
-## 저장 형식. `to_sorted_records()`가 이미 결정적 순서를 보장한다 (`SYS-003`).
+## 저장 형식 — **JSON으로 변환 가능한 값만** 담는다 (`P3-REV-002`).
+##
+## `to_sorted_records()`는 `WorldAnchor`·`CausalSource` **객체**를 그대로 들고 있어
+## `JSON.stringify()`를 거치면 객체가 사라진다. 저장은 됐는데 복원이 안 되는 상태였다.
+## 실제로 `RunSave`가 이 값을 저장만 하고 **복원 코드가 아예 없었다.**
+##
+## `enum`은 정수라 값 순서가 바뀌면 옛 세이브가 다른 변경 종류로 읽힌다 — 이름으로 저장한다.
 func to_save_dict() -> Dictionary:
-	return {"mutations": to_sorted_records()}
+	var out: Array = []
+	for r in to_sorted_records():
+		out.append({
+			"anchor": (r["anchor"] as WorldAnchor).to_save_dict(),
+			"change": change_to_string(r["change"]),
+			"caused_by": (r["caused_by"] as CausalSource).to_save_dict(),
+			"at_tick": int(r["at_tick"]),
+		})
+	return {"mutations": out}
+
+
+static func from_save_dict(d: Dictionary) -> TerrainMutationState:
+	var out := TerrainMutationState.new()
+	for r in d.get("mutations", []):
+		out.record(
+			WorldAnchor.from_save_dict(r["anchor"]),
+			change_from_string(String(r["change"])),
+			CausalSource.from_save_dict(r["caused_by"]),
+			int(r.get("at_tick", 0)))
+	return out
+
+
+static func change_to_string(c: Change) -> String:
+	match c:
+		Change.EXCAVATED: return "excavated"
+		Change.COLLAPSED: return "collapsed"
+		Change.BREACHED: return "breached"
+	return "excavated"
+
+
+static func change_from_string(name: String) -> Change:
+	match name:
+		"excavated": return Change.EXCAVATED
+		"collapsed": return Change.COLLAPSED
+		"breached": return Change.BREACHED
+	push_error("알 수 없는 TerrainMutationState.Change: %s" % name)
+	return Change.EXCAVATED

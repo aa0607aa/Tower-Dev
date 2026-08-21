@@ -46,11 +46,15 @@ static func can_trigger(trap: Dictionary, stimulus: TrapStimulus) -> bool:
 ##
 ## `FLR-012`: 발사형(`one_shot`)은 한 번 터지면 재충전되지 않는다.
 ## 이미 터진 함정은 메커니즘이 맞아도 발동하지 않는다.
+## `state`가 `null`이면 **판정할 수 없다** — 상태를 모르는 채로 발동시키면
+## 이미 터진 함정이 다시 터진다. 메커니즘만 보고 싶으면 `can_trigger()`를 쓴다.
+## (`P3-REV` 추가 정리 — 전에는 `null`이면 `true`를 돌려주어 `trigger()`가
+##  `state.fire_trap()`에서 터지기 직전까지 갔다.)
 static func should_fire(trap: Dictionary, state: FloorState, stimulus: TrapStimulus) -> bool:
+	if state == null:
+		return false
 	if not can_trigger(trap, stimulus):
 		return false
-	if state == null:
-		return true
 	var trap_id: StringName = trap["id"]
 	if state.trap_has_fired(trap_id) and bool(trap.get("one_shot", false)):
 		return false
@@ -87,7 +91,12 @@ static func apply(def: FloorDefinition, state: FloorState, stimulus: TrapStimulu
 	if def == null or stimulus == null:
 		return fired
 
-	if envelope != null and stimulus.source != null:
+	# `source`가 없으면 **누구 인과인지 모른다.** 경계 판정을 할 수 없으므로
+	# 봉투가 걸려 있으면 통과시키지 않는다 — 모르는 것을 허용으로 처리하지 않는다.
+	if envelope != null:
+		if stimulus.source == null:
+			push_warning("자극에 CausalSource가 없다 — 경계 판정 불가로 차단")
+			return fired
 		var anchor := WorldAnchor.new(def.world_id, def.world_region_ref, stimulus.cell, 0)
 		if not envelope.can_cross(stimulus.source, anchor):
 			return fired

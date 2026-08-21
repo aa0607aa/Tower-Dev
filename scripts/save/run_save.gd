@@ -56,6 +56,11 @@ static func from_text(text: String, defs: Dictionary) -> Dictionary:
 			if int(r["status"]) != FloorSave.LoadStatus.OK:
 				status = int(r["status"])
 
+		# 지형 변경 복원 (`P3-REV-002`). 전에는 **저장만 하고 복원하지 않아**
+		# 로드하면 파괴한 벽이 되살아났다.
+		if wd.has("terrain"):
+			world.terrain = TerrainMutationState.from_save_dict(wd["terrain"])
+
 		for entry in wd.get("ground_items", []):
 			world.put_ground_item(
 				ItemInstance.from_save_dict(entry["instance"]),

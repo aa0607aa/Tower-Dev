@@ -34,21 +34,24 @@ const KIND_PRIORITY: Array[StringName] = [&"item"]
 ##
 ## 반환 항목: `{ kind, id, cell, distance, label }`
 static func candidates(def: FloorDefinition, world: WorldState,
-		envelope: AccessEnvelope, actor_cell: Vector2i) -> Array[Dictionary]:
+		envelope: AccessEnvelope, actor_cell: Vector2i, layer: int = 0) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if def == null or world == null:
 		return out
 
 	# 파밍 **지점**이 아니라 바닥에 **실제로 있는 물건**을 본다 (`P3-T3`).
 	# 지점을 보면 유배자가 다른 곳에 버린 물건을 주울 수 없다.
+	#
+	# 조회는 `cell`이 아니라 **`WorldAnchor` 전체**로 한다 (`P3-REV-003`) —
+	# 좌표만 보면 다른 region/layer의 같은 좌표 물건까지 손에 잡힌다.
 	for r in range(-REACH_CELLS, REACH_CELLS + 1):
 		for c in range(-REACH_CELLS, REACH_CELLS + 1):
 			var cell := actor_cell + Vector2i(c, r)
+			var at := WorldAnchor.new(def.world_id, def.world_region_ref, cell, layer)
 			# 행동 반경 밖에는 손이 닿지 않는다 (`D-017` 4항 · `FLR-024`).
-			if envelope != null and not envelope.contains(
-					WorldAnchor.new(def.world_id, def.world_region_ref, cell, 0)):
+			if envelope != null and not envelope.contains(at):
 				continue
-			for instance_id in world.ground_items_at(cell):
+			for instance_id in world.ground_items_here(at):
 				out.append({
 					"kind": &"item",
 					"id": instance_id,
@@ -64,8 +67,8 @@ static func candidates(def: FloorDefinition, world: WorldState,
 
 ## 지금 `interact` 키를 누르면 실행될 **단 하나**의 대상. 없으면 빈 사전.
 static func best(def: FloorDefinition, world: WorldState,
-		envelope: AccessEnvelope, actor_cell: Vector2i) -> Dictionary:
-	var list := candidates(def, world, envelope, actor_cell)
+		envelope: AccessEnvelope, actor_cell: Vector2i, layer: int = 0) -> Dictionary:
+	var list := candidates(def, world, envelope, actor_cell, layer)
 	return list[0] if not list.is_empty() else {}
 
 
