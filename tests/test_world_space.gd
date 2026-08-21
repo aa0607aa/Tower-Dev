@@ -10,6 +10,15 @@ const EXILE_A := &"exile_a"
 const EXILE_B := &"exile_b"
 
 
+## 이 파일이 최소한 실행해야 하는 단언 수. (`P3-REV-008` 후속)
+##
+## GDScript의 런타임 스크립트 에러는 **그 함수만** 중단시키고 `run()`은 계속 진행한다.
+## 그래서 남은 단언이 조용히 사라져도 러너에는 PASS로 보인다 — 실제로 겪었다.
+## 하한을 못박아 두면 그런 유실이 실패로 드러난다.
+## 단언을 **추가**할 때는 손댈 필요 없고, 의도적으로 **줄일** 때만 함께 낮춘다.
+const MIN_ASSERTIONS := 51
+
+
 func run(t: TestCase) -> void:
 	_test_anchor_identity(t)
 	_test_anchor_survives_terrain_change(t)
@@ -19,6 +28,7 @@ func run(t: TestCase) -> void:
 	_test_terrain_is_shared(t)
 	_test_causal_boundary(t)
 	_test_mutation_order_is_deterministic(t)
+	t.done()
 
 
 func _anchor(x: int, y: int, layer: int = 0) -> WorldAnchor:

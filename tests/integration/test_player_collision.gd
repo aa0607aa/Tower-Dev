@@ -25,6 +25,15 @@ const TICKS_PER_SECOND := 60.0
 const FRAME_MARGIN := 40
 
 
+## 이 파일이 최소한 실행해야 하는 단언 수. (`P3-REV-008` 후속)
+##
+## GDScript의 런타임 스크립트 에러는 **그 함수만** 중단시키고 `run()`은 계속 진행한다.
+## 그래서 남은 단언이 조용히 사라져도 러너에는 PASS로 보인다 — 실제로 겪었다.
+## 하한을 못박아 두면 그런 유실이 실패로 드러난다.
+## 단언을 **추가**할 때는 손댈 필요 없고, 의도적으로 **줄일** 때만 함께 낮춘다.
+const MIN_ASSERTIONS := 13
+
+
 func run(tree: SceneTree, t: TestCase) -> void:
 	var def := FloorDefinitionLoader.load_from_file()
 	t.assert_true(def != null, "1층 정의를 불러와야 한다")
@@ -48,6 +57,7 @@ func run(tree: SceneTree, t: TestCase) -> void:
 	player.queue_free()
 	view.queue_free()
 	await tree.physics_frame
+	t.done()
 
 
 func _push_case(tree: SceneTree, t: TestCase, def: FloorDefinition,

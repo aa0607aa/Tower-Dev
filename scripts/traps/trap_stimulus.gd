@@ -88,9 +88,20 @@ static func from_body_contact(cell_: Vector2i, mass_: float, exile_id: StringNam
 ## 여기서 하는 일은 새 종류를 만드는 것이 아니라 **이미 있는 종류를 빠짐없이 전달**하는 것이다.
 static func from_body_entering(cell_: Vector2i, mass_: float,
 		exile_id: StringName) -> Array[TrapStimulus]:
+	return from_body_entering_with(cell_, mass_,
+		CausalSource.new(exile_id, CausalSource.Kind.BODY))
+
+
+## 같은 진입 자극을 **임의의 인과**로 만든다. (`P3-REV-008`)
+##
+## NPC·야생동물도 걸어 다니고 함정을 밟는다. 인과가 유배자로 고정돼 있으면
+## 그들의 이동을 표현할 수 없고, `AccessEnvelope` 판정도 틀린다 —
+## 독립 시뮬레이션은 유배자 경계에 막히지 않아야 한다 (`FLR-023`).
+static func from_body_entering_with(cell_: Vector2i, mass_: float,
+		source: CausalSource) -> Array[TrapStimulus]:
 	return [
-		from_body(cell_, mass_, exile_id),
-		from_body_contact(cell_, mass_, exile_id),
+		TrapStimulus.new(Kind.PRESSURE, mass_, cell_, source),
+		TrapStimulus.new(Kind.TOUCH, mass_, cell_, source),
 	]
 
 

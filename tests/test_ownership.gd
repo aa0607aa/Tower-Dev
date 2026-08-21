@@ -7,6 +7,15 @@ extends RefCounted
 ## 위반이 테스트로 잡혀야 canon이 지켜진다.
 
 
+## 이 파일이 최소한 실행해야 하는 단언 수. (`P3-REV-008` 후속)
+##
+## GDScript의 런타임 스크립트 에러는 **그 함수만** 중단시키고 `run()`은 계속 진행한다.
+## 그래서 남은 단언이 조용히 사라져도 러너에는 PASS로 보인다 — 실제로 겪었다.
+## 하한을 못박아 두면 그런 유실이 실패로 드러난다.
+## 단언을 **추가**할 때는 손댈 필요 없고, 의도적으로 **줄일** 때만 함께 낮춘다.
+const MIN_ASSERTIONS := 74
+
+
 func run(t: TestCase) -> void:
 	_test_layers_exist(t)
 	_test_inventory_belongs_to_run(t)
@@ -19,6 +28,7 @@ func run(t: TestCase) -> void:
 	_test_ground_items_are_addressed_by_anchor(t)
 	_test_put_ground_item_rejects_foreign_world(t)
 	_test_durability_grade_survives_roundtrip(t)
+	t.done()
 
 
 func _test_layers_exist(t: TestCase) -> void:

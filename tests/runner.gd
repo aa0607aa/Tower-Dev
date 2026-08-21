@@ -55,6 +55,19 @@ func _initialize() -> void:
 
 		total_assertions += t.assertions
 		var name := path.get_file()
+		# 본문이 끝까지 실행되지 않았으면 남은 단언이 조용히 사라진 것이다.
+		# 스크립트 에러는 코루틴을 중단시키는데 러너에는 정상 반환처럼 보인다.
+		# 단언 수 하한. 스크립트 에러는 그 함수만 중단시키므로 `completed`만으로는
+		# 하위 함수에서 사라진 단언을 못 잡는다.
+		var min_n: Variant = instance.get("MIN_ASSERTIONS")
+		var floor_n: int = int(min_n) if min_n != null else 0
+		if t.assertions < floor_n:
+			t._fail("단언이 %d개뿐이다 (최소 %d) — 스크립트 에러로 유실됐을 수 있다"
+				% [t.assertions, floor_n])
+
+		if not t.completed:
+			t._fail("본문이 끝까지 실행되지 않았다 — 스크립트 에러로 단언이 유실됐을 수 있다")
+
 		if t.failures.is_empty():
 			print("  PASS  %-28s (%d 단언)" % [name, t.assertions])
 		else:

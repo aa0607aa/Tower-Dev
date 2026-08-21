@@ -47,6 +47,15 @@ const FLUSH_STEPS := 4
 var _base_speed := 160.0
 
 
+## 이 파일이 최소한 실행해야 하는 단언 수. (`P3-REV-008` 후속)
+##
+## GDScript의 런타임 스크립트 에러는 **그 함수만** 중단시키고 `run()`은 계속 진행한다.
+## 그래서 남은 단언이 조용히 사라져도 러너에는 PASS로 보인다 — 실제로 겪었다.
+## 하한을 못박아 두면 그런 유실이 실패로 드러난다.
+## 단언을 **추가**할 때는 손댈 필요 없고, 의도적으로 **줄일** 때만 함께 낮춘다.
+const MIN_ASSERTIONS := 7
+
+
 func run(tree: SceneTree, t: TestCase) -> void:
 	var original_tps := Engine.physics_ticks_per_second
 	_base_speed = (load("res://scripts/player/player.gd") as GDScript).get_script_constant_map()["BASE_SPEED"]
@@ -73,6 +82,7 @@ func run(tree: SceneTree, t: TestCase) -> void:
 		"대각 이동 속도가 직선과 같아야 한다 (정규화)", SPEED_TOLERANCE)
 	t.assert_true(diagonal <= straight + SPEED_TOLERANCE,
 		"대각이 직선보다 빠르면 안 된다 (직선 %.2f, 대각 %.2f px/s)" % [straight, diagonal])
+	t.done()
 
 
 ## 입력을 실제로 눌러 **속도(픽셀/초)** 를 잰다.

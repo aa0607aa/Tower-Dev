@@ -21,6 +21,15 @@ const CELL := 32
 const WALK_FRAMES := 40
 
 
+## 이 파일이 최소한 실행해야 하는 단언 수. (`P3-REV-008` 후속)
+##
+## GDScript의 런타임 스크립트 에러는 **그 함수만** 중단시키고 `run()`은 계속 진행한다.
+## 그래서 남은 단언이 조용히 사라져도 러너에는 PASS로 보인다 — 실제로 겪었다.
+## 하한을 못박아 두면 그런 유실이 실패로 드러난다.
+## 단언을 **추가**할 때는 손댈 필요 없고, 의도적으로 **줄일** 때만 함께 낮춘다.
+const MIN_ASSERTIONS := 13
+
+
 func run(tree: SceneTree, t: TestCase) -> void:
 	var main: Node2D = (load(MAIN_SCENE) as PackedScene).instantiate()
 	tree.root.add_child(main)
@@ -40,6 +49,7 @@ func run(tree: SceneTree, t: TestCase) -> void:
 
 	main.queue_free()
 	await tree.physics_frame
+	t.done()
 
 
 ## ★ 미발동 `wall_bolt` → 실제 플레이어 이동 → 발동.
@@ -58,8 +68,11 @@ func _test_walk_into_wall_bolt(tree: SceneTree, t: TestCase, main: Node2D,
 	var from := cell + Vector2i(-1, 0)
 	t.assert_true(def.is_walkable(from), "테스트 전제: 진입 칸이 통행 가능해야 한다")
 	_place(player, from)
-	# 진입을 실제 이동으로 만들기 위해 판정 캐시를 진입 칸으로 맞춘다.
-	main._last_trap_cell = from
+	# 진입을 실제 이동으로 만들기 위해 어댑터의 마지막 칸을 진입 칸으로 맞춘다.
+	# 마지막 칸 기억은 `TrapSensor`가 들고 있다 (`P3-REV-008`).
+	var sensor: TrapSensor = main._trap_sensor
+	t.assert_true(sensor != null, "Main이 TrapSensor를 들고 있어야 한다 (P3-REV-008)")
+	sensor._last_cell[main.EXILE_ID] = from
 	await tree.physics_frame
 
 	Input.action_press("move_right")

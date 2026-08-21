@@ -10,6 +10,15 @@ extends RefCounted
 ## 함정 종류나 단서 텍스트를 상시 표시하는 코드가 있으면 그건 정답 표시다.
 
 
+## 이 파일이 최소한 실행해야 하는 단언 수. (`P3-REV-008` 후속)
+##
+## GDScript의 런타임 스크립트 에러는 **그 함수만** 중단시키고 `run()`은 계속 진행한다.
+## 그래서 남은 단언이 조용히 사라져도 러너에는 PASS로 보인다 — 실제로 겪었다.
+## 하한을 못박아 두면 그런 유실이 실패로 드러난다.
+## 단언을 **추가**할 때는 손댈 필요 없고, 의도적으로 **줄일** 때만 함께 낮춘다.
+const MIN_ASSERTIONS := 45
+
+
 func run(t: TestCase) -> void:
 	var def := FloorDefinitionLoader.load_from_file()
 	t.assert_true(def != null, "1층 정의를 불러와야 한다")
@@ -24,6 +33,7 @@ func run(t: TestCase) -> void:
 	_test_ground_view_does_not_distinguish_items(t)
 	_test_debug_overlay_is_gated(t)
 	_test_lethal_traps_are_observable(t, def)
+	t.done()
 
 
 ## ★ 단서 흔적이 함정 칸을 **정확히** 가리키면 안 된다 — 그건 정답이다.

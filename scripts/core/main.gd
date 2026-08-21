@@ -47,8 +47,8 @@ const EXILE_ID := &"player"
 ## 함정 압력 판정에 필요한 최소 표현이라 여기 둔다.
 const EXILE_MASS := 70.0
 
-## 마지막으로 함정을 판정한 칸. 같은 칸에서 매 프레임 다시 판정하지 않는다.
-var _last_trap_cell := Vector2i(-9999, -9999)
+## 물리 사건 → 함정 자극 어댑터 (`P3-REV-008`). 마지막 칸 기억도 여기 있다.
+var _trap_sensor: TrapSensor
 
 
 func _ready() -> void:
@@ -83,6 +83,9 @@ func _ready() -> void:
 	# **이번 회차의 실제 시작점**을 기준으로 계산해야 안티 스킵이 의미를 갖는다.
 	_floor_state.party_stairs.append(StairResolver.new().resolve_from(
 		_floor_def, _player.access_envelope, &"party_1", RUN_SEED, start))
+
+	# 함정 감지 어댑터. 플레이어도 던진 물체도 이걸 통해서만 자극을 만든다.
+	_trap_sensor = TrapSensor.new(_floor_def, _floor_state, _player.access_envelope)
 
 	# 파밍 결과를 바닥에 실체화한다 (`P3-T3`). 멱등하므로 로드 후 다시 불러도 복제되지 않는다.
 	var materialized := ItemService.materialize_floor_loot(_world, _floor_def, _floor_state)
@@ -145,17 +148,13 @@ func _process(_delta: float) -> void:
 func _check_trap_underfoot() -> void:
 	if _floor_def == null or _floor_state == null:
 		return
+	# 자극 생성은 **어댑터 한 곳**에서만 한다 (`P3-REV-008`).
+	# 플레이어·던진 물체·NPC가 각자 자극을 만들면 한쪽만 잘못 보내는 버그가 다시 난다 —
+	# 실제로 `P3-REV-005`가 그랬다.
+	var fired := _trap_sensor.sense_body(
+		EXILE_ID, _player.global_position, EXILE_MASS,
+		CausalSource.new(EXILE_ID, CausalSource.Kind.BODY))
 	var cell := _player_cell()
-	if cell == _last_trap_cell:
-		return
-	_last_trap_cell = cell
-
-	# 몸이 칸에 들어가면 **누르고 동시에 스친다** (`P3-REV-005`).
-	# 전에는 `from_body()`(압력)만 보내서 `touch`만 받는 벽 화살 함정이
-	# 실제 플레이에서 절대 발동하지 않았다.
-	var stimuli := TrapStimulus.from_body_entering(cell, EXILE_MASS, EXILE_ID)
-	var fired := TrapRuntime.apply_all(
-		_floor_def, _floor_state, stimuli, _player.access_envelope)
 	for trap_id in fired:
 		# 피해·부상은 `PHASE 4`/`PHASE 6`이다. 지금은 발동 사실만 알린다.
 		GameLog.info("Main", "함정 발동 — `%s` @%v" % [trap_id, cell])
