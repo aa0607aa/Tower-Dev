@@ -25,6 +25,8 @@ func run(t: TestCase) -> void:
 	_test_no_loss(t, def)
 	_test_drop_outside_envelope_rejected(t, def)
 	_test_materialize_does_not_revive_taken(t, def)
+	_test_drop_is_transactional(t, def)
+	_test_save_version_rejects_old(t, def, defs)
 
 
 ## ★ 완료 조건 — 전체 왕복에서 instance가 살아남는가.
@@ -157,3 +159,57 @@ func _test_materialize_does_not_revive_taken(t: TestCase, def: FloorDefinition) 
 		"수확된 지점은 실체화되지 않아야 한다")
 	t.assert_true(not world.ground_items.has(StringName("%s/%s" % [def.floor_id, point_id])),
 		"수확된 지점의 물건이 바닥에 생기면 안 된다")
+
+
+## ★ `P3-REV-006` — 버리기는 **트랜잭션**이어야 한다.
+##
+## 전에는 인벤토리에서 먼저 빼고 `put_ground_item()`의 반환값을 무시했다.
+## 바닥에 놓는 것이 실패하면 **물건이 영구 소실**된다. 실패하면 양쪽 다 그대로여야 한다.
+func _test_drop_is_transactional(t: TestCase, def: FloorDefinition) -> void:
+	var run := RunState.new(1)
+	var world := run.ensure_world(def.world_id)
+	var item := ItemInstance.new(&"held", &"stone", &"misc", &"poor", &"")
+	run.add_to_inventory(EXILE, item)
+
+	var before_inv := JSON.stringify(run.to_save_dict())
+	var before_ground := world.ground_items.size()
+
+	# 다른 월드의 앵커 — `put_ground_item()`이 거부한다. 봉투는 일부러 없이 간다.
+	var foreign := WorldAnchor.new(&"other_world", &"r", Vector2i(1, 1), 0)
+	t.assert_true(not ItemService.drop(run, world, EXILE, &"held", foreign, null),
+		"다른 월드에는 버릴 수 없어야 한다")
+
+	t.assert_true(run.has_item(EXILE, &"held"),
+		"실패한 버리기 뒤에도 물건이 손에 남아야 한다 — 영구 소실 금지 (P3-REV-006)")
+	t.assert_eq(run.inventory(EXILE).size(), 1, "인벤토리 개수가 그대로여야 한다")
+	t.assert_eq(JSON.stringify(run.to_save_dict()), before_inv,
+		"실패한 버리기가 회차 상태를 바꾸면 안 된다")
+	t.assert_eq(world.ground_items.size(), before_ground,
+		"실패한 버리기가 바닥을 바꾸면 안 된다")
+
+	# 같은 물건을 정상 위치에 버리면 성공해야 한다 — 위 실패가 물건을 망가뜨리지 않았다
+	var ok := WorldAnchor.new(def.world_id, def.world_region_ref, def.start_points[0], 0)
+	t.assert_true(ItemService.drop(run, world, EXILE, &"held", ok, null),
+		"실패 뒤에도 정상 버리기는 되어야 한다")
+	t.assert_eq(world.ground_items.size(), before_ground + 1, "이번에는 바닥에 놓여야 한다")
+
+
+## `P3-REV-007` — 옛 세이브 포맷은 조용히 읽지 않는다.
+##
+## `ItemInstance`가 `durability: int` → `durability_grade`/`points`로 바뀌었다.
+## v1을 그대로 읽으면 **등급이 빈 값으로 뭉개진다** — 잘못 읽느니 알린다.
+func _test_save_version_rejects_old(t: TestCase, def: FloorDefinition, defs: Dictionary) -> void:
+	t.assert_eq(RunSave.SAVE_VERSION, 2, "스키마가 바뀌었으므로 버전이 올라가야 한다")
+
+	var run := RunState.new(5)
+	run.ensure_world(def.world_id)
+	var current := RunSave.to_text(run)
+	t.assert_eq(int(RunSave.from_text(current, defs)["status"]),
+		int(FloorSave.LoadStatus.OK), "현재 버전은 정상 로드돼야 한다")
+
+	var old_text := current.replace('"save_version": 2', '"save_version": 1')
+	var r := RunSave.from_text(old_text, defs)
+	t.assert_eq(int(r["status"]), int(FloorSave.LoadStatus.VERSION_MISMATCH),
+		"v1 세이브는 VERSION_MISMATCH로 알려야 한다")
+	t.assert_true(r["run"] == null, "버전이 다르면 상태를 만들지 않아야 한다")
+
