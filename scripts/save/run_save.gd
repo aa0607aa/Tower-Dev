@@ -10,7 +10,14 @@ extends RefCounted
 ## **`instance_id`가 그대로 살아남아야** 한다 — 저장/로드로 id가 바뀌면
 ## 같은 물건인지 알 수 없고 복제·소실을 검출할 방법도 사라진다.
 
-const SAVE_VERSION := 1
+## 세이브 포맷 버전.
+##
+## `v1 → v2` (`P3-REV-007`): `ItemInstance`가 `durability: int` 하나에서
+## `durability_grade`(등급) + `durability_points`(수치)로 나뉘었다 (`P3-REV-004`).
+## 옛 v1 세이브를 그대로 읽으면 **등급이 빈 값으로 뭉개진다** — 조용히 잘못 읽느니
+## `VERSION_MISMATCH`로 알린다. 출시 전이라 migration을 만들 이유가 없다.
+## v1 호환이 필요해지면 여기에 **명시적 migration**을 만든다.
+const SAVE_VERSION := 2
 
 
 static func to_dict(run: RunState) -> Dictionary:

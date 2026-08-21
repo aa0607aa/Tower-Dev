@@ -62,10 +62,36 @@ static func kind_to_string(k: Kind) -> String:
 	return "pressure"
 
 
-## 유배자 본체가 밟았다.
+## 유배자 본체가 밟았다 — **누르는** 자극만.
 static func from_body(cell_: Vector2i, mass_: float, exile_id: StringName) -> TrapStimulus:
 	return TrapStimulus.new(Kind.PRESSURE, mass_, cell_,
 		CausalSource.new(exile_id, CausalSource.Kind.BODY))
+
+
+## 유배자 본체가 **스쳤다** — 실선·감지선을 건드리는 자극.
+static func from_body_contact(cell_: Vector2i, mass_: float, exile_id: StringName) -> TrapStimulus:
+	return TrapStimulus.new(Kind.TOUCH, mass_, cell_,
+		CausalSource.new(exile_id, CausalSource.Kind.BODY))
+
+
+## 유배자가 **한 칸에 실제로 들어갔을 때** 생기는 자극 전부. (`P3-REV-005`)
+##
+## ## 왜 하나가 아니라 여러 개인가
+## 몸이 공간을 지나가면 **바닥을 누르고(`PRESSURE`) 동시에 그 공간의 것들을 스친다(`TOUCH`)**.
+## 둘 중 하나만 보내면 그 자극만 받는 함정이 실제 플레이에서 절대 안 터진다.
+##
+## 실제로 그 버그가 있었다 — `floor1`의 `wall_bolt`는 `touch`/`impact`만 받는데
+## 플레이 경로는 `from_body()`(=`PRESSURE`)만 보내고 있어서
+## **미발동 벽 화살 함정 위를 걸어도 아무 일이 없었다.**
+##
+## 자극 종류는 여전히 **DESIGN**이다 (`FLR-028`은 "실제 메커니즘을 정상적으로 구현하라"만 정한다).
+## 여기서 하는 일은 새 종류를 만드는 것이 아니라 **이미 있는 종류를 빠짐없이 전달**하는 것이다.
+static func from_body_entering(cell_: Vector2i, mass_: float,
+		exile_id: StringName) -> Array[TrapStimulus]:
+	return [
+		from_body(cell_, mass_, exile_id),
+		from_body_contact(cell_, mass_, exile_id),
+	]
 
 
 ## 유배자가 **던진 물체**가 때렸다.

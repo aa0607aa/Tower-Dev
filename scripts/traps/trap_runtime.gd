@@ -81,12 +81,32 @@ static func traps_at(def: FloorDefinition, cell: Vector2i) -> Array[Dictionary]:
 	return out
 
 
+## 여러 자극을 **한 사건으로** 적용한다. (`P3-REV-005`)
+##
+## ## 왜 중복 방지가 필요한가
+## 한 번 칸에 들어가면 압력과 접촉이 동시에 생긴다. 둘 다 받는 함정에 그냥 순서대로
+## 적용하면 **한 번 들어갔는데 두 번 터진다.** 반복형(`one_shot`이 아닌) 함정에서
+## 특히 그렇다 — 발사형은 두 번째가 무장 해제로 막히지만 반복형은 막히지 않는다.
+##
+## 그래서 이 배치 안에서 이미 발동한 함정은 건너뛴다.
+static func apply_all(def: FloorDefinition, state: FloorState,
+		stimuli: Array, envelope: AccessEnvelope = null) -> Array[StringName]:
+	var fired: Array[StringName] = []
+	for s in stimuli:
+		for trap_id in apply(def, state, s, envelope, fired):
+			fired.append(trap_id)
+	return fired
+
+
 ## 한 자극을 층 전체에 적용한다. 발동한 함정 id들을 돌려준다.
+##
+## `already_fired`에 든 함정은 건너뛴다 — 같은 사건에서 중복 발동을 막는다.
 ##
 ## 유배자가 원인인 자극은 **행동 반경 밖에 닿을 수 없다** (`D-017` 4항 · `FLR-024`).
 ## 던진 돌도 유배자 인과이므로 경계를 넘지 못한다. 독립 시뮬레이션(NPC·야생동물)은 통과한다.
 static func apply(def: FloorDefinition, state: FloorState, stimulus: TrapStimulus,
-		envelope: AccessEnvelope = null) -> Array[StringName]:
+		envelope: AccessEnvelope = null,
+		already_fired: Array[StringName] = []) -> Array[StringName]:
 	var fired: Array[StringName] = []
 	if def == null or stimulus == null:
 		return fired
@@ -102,6 +122,8 @@ static func apply(def: FloorDefinition, state: FloorState, stimulus: TrapStimulu
 			return fired
 
 	for trap in traps_at(def, stimulus.cell):
+		if already_fired.has(trap["id"]):
+			continue
 		if trigger(trap, state, stimulus):
 			fired.append(trap["id"])
 	return fired

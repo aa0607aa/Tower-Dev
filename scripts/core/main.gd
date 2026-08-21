@@ -4,9 +4,14 @@ extends Node2D
 ## 1층 고정 정의를 로드해 지형을 세우고 플레이어를 시작점에 놓는다.
 ## PHASE 1의 `TestRoom.tscn`은 폐기했다 — canon 지형이 아니었다 (`FLR-001`).
 ##
-## population(`P2-T3`) · 행동 반경(`P2-T4`) · 계단(`P2-T5`)까지 실제로 쓰고 있다.
-## 아직 없는 것: 상호작용(밟기·줍기·계단 타기)은 PHASE 3이다.
-## `DebugOverlay`는 그때 삭제한다 — 미발견 정보를 그대로 노출하므로 배포에 남길 수 없다.
+## PHASE 3까지 실제로 쓰고 있다 — population · 행동 반경 · 계단 · 상호작용(줍기/버리기) ·
+## 함정 발동 · 단서 표현.
+##
+## 아직 없는 것: 계단 타기(층 이동)·전투(`PHASE 4`)·인벤토리 UI(`PHASE 6`)·던지기 입력.
+##
+## `DebugOverlay`는 **삭제하지 않는다.** 단서 흔적 튜닝을 `PHASE 8`(도트 완성 후)로
+## 미뤘고 그때 흔적 위치와 실제 함정 위치를 비교할 도구가 필요하다.
+## 배포 빌드에서는 게이트로 켜지지 않는다.
 
 const CELL := 32  # Canon.TILE_SIZE
 
@@ -145,15 +150,19 @@ func _check_trap_underfoot() -> void:
 		return
 	_last_trap_cell = cell
 
-	var stimulus := TrapStimulus.from_body(cell, EXILE_MASS, EXILE_ID)
-	var fired := TrapRuntime.apply(
-		_floor_def, _floor_state, stimulus, _player.access_envelope)
+	# 몸이 칸에 들어가면 **누르고 동시에 스친다** (`P3-REV-005`).
+	# 전에는 `from_body()`(압력)만 보내서 `touch`만 받는 벽 화살 함정이
+	# 실제 플레이에서 절대 발동하지 않았다.
+	var stimuli := TrapStimulus.from_body_entering(cell, EXILE_MASS, EXILE_ID)
+	var fired := TrapRuntime.apply_all(
+		_floor_def, _floor_state, stimuli, _player.access_envelope)
 	for trap_id in fired:
 		# 피해·부상은 `PHASE 4`/`PHASE 6`이다. 지금은 발동 사실만 알린다.
 		GameLog.info("Main", "함정 발동 — `%s` @%v" % [trap_id, cell])
 		_fired_notice = "함정이 작동했다"
 		_fired_notice_until = Time.get_ticks_msec() + 2500
-		# 터진 함정의 흔적은 지운다 — 위험이 사라졌다.
+		# 흔적을 다시 그린다. **터졌다고 무조건 지우는 것이 아니라**
+		# 무장이 풀린 함정만 지운다 — 반복형 함정은 발동 뒤에도 위험이 남는다 (`P3-REV-001`).
 		_clue_view.refresh()
 
 

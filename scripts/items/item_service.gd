@@ -30,9 +30,11 @@ static func materialize_floor_loot(world: WorldState, def: FloorDefinition,
 		var instance := ItemInstance.from_loot(def.floor_id, point_id, entry)
 		if world.ground_items.has(instance.instance_id):
 			continue  # 이미 바닥에 있다 — 로드 직후 등
-		world.put_ground_item(instance,
-			WorldAnchor.new(def.world_id, def.world_region_ref, point["cell"], 0))
-		made += 1
+		# 성공한 것만 센다 (`P3-REV-006`). 실패를 성공으로 세면
+		# "24개 실체화"라고 로그를 찍어놓고 실제로는 없는 상태가 된다.
+		if world.put_ground_item(instance,
+				WorldAnchor.new(def.world_id, def.world_region_ref, point["cell"], 0)):
+			made += 1
 	return made
 
 
@@ -63,8 +65,21 @@ static func drop(run: RunState, world: WorldState, exile_id: StringName,
 		return false
 	if envelope != null and not envelope.contains(at):
 		return false
+	# ## 실패하면 **아무것도 바뀌면 안 된다** (`P3-REV-006`)
+	# 전에는 인벤토리에서 먼저 빼고 `put_ground_item()`의 반환값을 무시했다.
+	# 바닥에 놓는 것이 실패하면(다른 월드 앵커 등) **물건이 영구 소실**된다.
+	# 그래서 놓을 수 있는지 먼저 확인하고, 확인된 뒤에만 손에서 뺀다.
+	if not run.has_item(exile_id, instance_id):
+		return false
+	if at.world_id != world.world_id:
+		return false
+
 	var instance := run.remove_from_inventory(exile_id, instance_id)
 	if instance == null:
 		return false
-	world.put_ground_item(instance, at)
+	if not world.put_ground_item(instance, at):
+		# 여기 오면 위 확인이 놓친 경우다. 손에 되돌려 놓는다 — 소실보다 낫다.
+		run.add_to_inventory(exile_id, instance)
+		push_error("바닥에 놓지 못해 되돌렸다: %s" % instance_id)
+		return false
 	return true

@@ -55,7 +55,11 @@
 
 GPT 분해안을 현재 Godot 구조와 대조했다. **순서는 그대로 타당하다.** 다만 한 가지를 짚는다.
 
-- ⚠ **`RunState`·`WorldState` 컨테이너가 실제로 존재하지 않는다.** `TerrainMutationState`는
+> **아래는 2026-08-20 당시의 진단 기록이다. `P3-T2a`에서 전부 해소됐다** —
+> `scripts/world/run_state.gd`·`world_state.gd`가 실제로 존재하고 소유권 가드 테스트가 지킨다.
+> 왜 그런 구조가 되었는지를 남기기 위해 지운다.
+
+- ⚠ (당시) **`RunState`·`WorldState` 컨테이너가 실제로 존재하지 않았다.** `TerrainMutationState`는
   "`WorldState` 소유"라고 문서화돼 있지만 소유자가 없어 **테스트에서만 생성**되고
   `main.gd`는 만들지도 않는다. 3계층 canon이 코드에는 아직 `FloorState` 한 층뿐이다.
 - 그래서 `P3-T2`의 "인벤토리를 `FloorState`에 두지 않는다"를 지키려면 **인벤토리가 살 자리를
