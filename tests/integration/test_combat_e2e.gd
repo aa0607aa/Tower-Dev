@@ -18,7 +18,7 @@ const MAIN_SCENE := "res://scenes/world/Main.tscn"
 const CELL := 32
 
 ## 이 파일이 최소한 실행해야 하는 단언 수. (`P3-REV-008` 후속)
-const MIN_ASSERTIONS := 30
+const MIN_ASSERTIONS := 37
 
 
 func run(tree: SceneTree, t: TestCase) -> void:
@@ -36,6 +36,7 @@ func run(tree: SceneTree, t: TestCase) -> void:
 
 	await _test_attack_kills_enemy(tree, t, main)
 	await _test_tactical_pause_stops_world(tree, t, main)
+	await _test_aim_follows_last_input(tree, t, main)
 	await _test_dash_moves_further(tree, t, main)
 	await _test_throw_creates_projectile(tree, t, main)
 	await _test_enemy_attacks_player(tree, t, main)
@@ -127,6 +128,81 @@ func _test_tactical_pause_stops_world(tree: SceneTree, t: TestCase, main: Node2D
 	t.assert_true(enemy.global_position.distance_to(frozen) > 1.0,
 		"재개하면 적이 다시 움직여야 한다")
 	enemy.target = null
+
+
+## ★ 조준은 **마우스와 키보드 둘 다** 받고, 마지막 입력이 이긴다. (오너 결정 2026-08-21)
+##
+## ## 왜 생겼는가
+## 조준이 **이동 방향으로만** 갱신됐다. 그래서 멈춰서 치면 빗나가고 함정도 조준할 수 없었다 —
+## 플레이 로그에 돌 128번을 던졌는데 **함정 발동 0, 근접 타격 0**이었다.
+##
+## ## 걷는 것만으로 조준이 끌려가면 안 된다
+## 카메라가 플레이어를 따라가므로 **마우스를 안 움직여도 월드 좌표는 바뀐다.**
+## 그걸 "마우스가 움직였다"로 세면 걷기만 해도 조준이 커서 쪽으로 끌려간다.
+## 그래서 움직임 판정은 **화면 좌표**로 한다.
+func _test_aim_follows_last_input(tree: SceneTree, t: TestCase, main: Node2D) -> void:
+	var player: CharacterBody2D = main._player
+	var open_cell: Vector2i = main._floor_def.start_points[0]
+	player.global_position = Vector2(open_cell.x * CELL + CELL / 2.0,
+		open_cell.y * CELL + CELL / 2.0)
+	await tree.physics_frame
+
+	# ① 방향키 입력이 조준을 바꾼다
+	Input.action_press("move_up")
+	for i in 3:
+		await tree.physics_frame
+	Input.action_release("move_up")
+	t.assert_true(player.facing.y < -0.5,
+		"방향키로 조준이 바뀌어야 한다 (실제 %v)" % player.facing)
+
+	Input.action_press("move_right")
+	for i in 3:
+		await tree.physics_frame
+	Input.action_release("move_right")
+	t.assert_true(player.facing.x > 0.5,
+		"마지막 입력이 이겨야 한다 (실제 %v)" % player.facing)
+
+	# ② ★ 걷기만으로는 조준이 커서 쪽으로 끌려가지 않는다
+	player.facing = Vector2.UP
+	var aim_before: Vector2 = player.facing
+	for i in 10:
+		await tree.physics_frame
+	t.assert_vec_almost_eq(player.facing, aim_before,
+		"입력이 없으면 조준이 유지돼야 한다 — 멈췄다고 리셋되면 안 된다", 0.001)
+
+	Input.action_press("move_left")
+	for i in 6:
+		await tree.physics_frame
+	Input.action_release("move_left")
+	t.assert_true(player.facing.x < -0.5,
+		"걸으면 그 방향으로 조준된다 (카메라 이동에 끌려가면 안 된다) — 실제 %v" % player.facing)
+
+	# ③ 조준 방향으로 실제 공격이 나간다
+	player.facing = Vector2.DOWN
+	Input.action_press("attack")
+	await tree.physics_frame
+	Input.action_release("attack")
+	await tree.physics_frame
+	t.assert_vec_almost_eq(player.attack_state.direction, Vector2.DOWN,
+		"공격이 조준 방향으로 나가야 한다", 0.01)
+
+	# 공격이 끝날 때까지 흘린다
+	for i in 40:
+		await tree.physics_frame
+
+	# ④ 조준 소스가 코드에 둘 다 있어야 한다
+	var code := ""
+	for line in FileAccess.get_file_as_string("res://scripts/player/player.gd").split("
+"):
+		var stripped := line.strip_edges()
+		if stripped.begins_with("#"):
+			continue
+		code += stripped + "
+"
+	t.assert_true(code.contains("get_global_mouse_position"),
+		"마우스 조준이 있어야 한다 (오너 결정 — 병행)")
+	t.assert_true(code.contains("get_mouse_position()") and code.contains("_last_mouse_screen"),
+		"마우스 움직임은 **화면 좌표**로 재야 한다 — 월드로 재면 걷기만 해도 조준이 끌려간다")
 
 
 ## 대시는 평소보다 멀리 간다.

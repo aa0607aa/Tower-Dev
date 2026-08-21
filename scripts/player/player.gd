@@ -43,7 +43,24 @@ var combatant: Combatant = null
 var attack_state := AttackState.new()
 
 ## 마지막으로 바라본 방향. 멈춰 있어도 그쪽으로 휘두른다.
+##
+## ## 조준은 마우스와 키보드 **둘 다** 받는다 (오너 결정 2026-08-21)
+## 이동 방향으로만 조준하면 **멈춰서 치면 빗나가고 함정도 조준할 수 없다.**
+## 실제로 그랬다 — 플레이 로그에 돌 128번을 던졌는데 함정 발동 0, 근접 타격 0이었다.
+## 공격이 좌클릭에 걸려 있는데 조준이 커서를 따라가지 않는 것이 어긋난 지점이었다.
+##
+## **마지막 입력이 이긴다.** 마우스를 움직이면 커서 쪽, 방향키를 누르면 그쪽.
+## 손이 오가면 조준이 튈 수 있지만, 둘 중 하나만 쓰는 플레이어에게는 항상 자연스럽다.
 var facing := Vector2.RIGHT
+
+## 마우스가 실제로 움직였는지 판단할 최소 거리(px). **DESIGN.**
+## 이 값이 없으면 미세한 떨림만으로 키보드 조준을 덮어쓴다.
+const MOUSE_AIM_THRESHOLD := 3.0
+
+## **화면** 좌표 기준이다. 월드 좌표로 재면 카메라가 플레이어를 따라가는 것만으로도
+## "마우스가 움직였다"가 되어 **걷기만 해도 조준이 커서 쪽으로 끌려간다.**
+## 실제로 그래서 E2E가 깨졌다.
+var _last_mouse_screen := Vector2.INF
 
 ## 월드 시간 배속 (`CBT-001`). `Main`이 넣어준다.
 ##
@@ -124,6 +141,38 @@ func advance_combat(world_delta: float) -> bool:
 	return attack_state.advance(world_delta)
 
 
+## 조준 방향을 갱신한다. **마지막 입력이 이긴다.**
+##
+## 마우스가 움직였으면 커서 쪽, 아니면 이동 입력 쪽.
+## 둘 다 없으면 직전 방향을 유지한다 — 멈춰 있다고 정면으로 리셋되면 안 된다.
+func _update_facing(move_input: Vector2) -> void:
+	# 움직였는지는 **화면** 좌표로, 조준 방향은 **월드** 좌표로 잰다.
+	var screen := get_viewport().get_mouse_position()
+	var mouse_moved := _last_mouse_screen != Vector2.INF 		and screen.distance_to(_last_mouse_screen) > MOUSE_AIM_THRESHOLD
+	_last_mouse_screen = screen
+
+	facing = resolve_facing(mouse_moved, get_global_mouse_position() - global_position,
+		move_input, facing)
+
+
+## 조준 결정 — **순수 함수다.**
+##
+## ## 왜 밖으로 뺐는가
+## 헤드리스 테스트는 마우스를 움직일 수 없다. 결정이 `_update_facing()` 안에만 있으면
+## **마우스 분기를 통째로 죽여도 테스트가 통과한다** — 실제로 변이가 안 잡혔다.
+## `ClueView.shows_trace_for()`와 같은 처방이다: 판단을 함수로 빼고 테스트가 그걸 부른다.
+##
+## **마지막 입력이 이긴다.** 둘 다 없으면 직전 방향을 유지한다 —
+## 멈췄다고 정면으로 리셋되면 조준이 튄다.
+static func resolve_facing(mouse_moved: bool, to_cursor: Vector2,
+		move_input: Vector2, current: Vector2) -> Vector2:
+	if mouse_moved and to_cursor.length() > 0.0:
+		return to_cursor.normalized()
+	if move_input.length() > 0.0:
+		return move_input.normalized()
+	return current
+
+
 ## 월드가 멈춰 있는가. `Main`과 테스트가 함께 쓴다.
 func is_world_paused() -> bool:
 	return time_scale != null and time_scale.is_paused()
@@ -138,8 +187,7 @@ func _physics_process(delta: float) -> void:
 		return
 
 	var raw := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	if raw.length() > 0.0:
-		facing = raw.normalized()
+	_update_facing(raw)
 
 	if combatant != null and not combatant.alive:
 		velocity = Vector2.ZERO

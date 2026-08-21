@@ -14,7 +14,7 @@ extends RefCounted
 ##
 ## GDScript의 런타임 스크립트 에러는 **그 함수만** 중단시키고 `run()`은 계속 진행한다.
 ## 하한을 못박아 두면 그렇게 사라진 단언이 실패로 드러난다.
-const MIN_ASSERTIONS := 101
+const MIN_ASSERTIONS := 107
 
 
 func run(t: TestCase) -> void:
@@ -37,6 +37,7 @@ func run(t: TestCase) -> void:
 	_test_projectile_sweeps_path(t)
 	_test_active_window_survives_coarse_delta(t)
 	_test_projectile_hits_target_without_tunneling(t)
+	_test_aim_resolution(t)
 	t.done()
 
 
@@ -639,6 +640,42 @@ func _test_projectile_hits_target_without_tunneling(t: TestCase) -> void:
 	coarse.free()
 	fine.free()
 	through.free()
+
+
+## ★ 조준 결정 — 마우스와 키보드 **병행**, 마지막 입력이 이긴다. (오너 결정 2026-08-21)
+##
+## 순수 함수라 마우스 없이도 검사할 수 있다. 헤드리스에서 실제 커서를 움직일 수 없어
+## `_update_facing()` 안에 두면 **마우스 분기를 죽여도 테스트가 통과했다.**
+func _test_aim_resolution(t: TestCase) -> void:
+	var player_script := load("res://scripts/player/player.gd") as GDScript
+
+	# ① 마우스가 움직였으면 커서 쪽
+	t.assert_vec_almost_eq(
+		player_script.resolve_facing(true, Vector2(0, -50), Vector2.RIGHT, Vector2.LEFT),
+		Vector2.UP, "마우스가 움직였으면 커서 쪽으로 조준한다", 0.001)
+
+	# ② 마우스가 안 움직였으면 이동 방향
+	t.assert_vec_almost_eq(
+		player_script.resolve_facing(false, Vector2(0, -50), Vector2.RIGHT, Vector2.LEFT),
+		Vector2.RIGHT, "마우스가 멈춰 있으면 이동 방향으로 조준한다", 0.001)
+
+	# ③ 둘 다 없으면 유지 — 멈췄다고 리셋되면 조준이 튄다
+	t.assert_vec_almost_eq(
+		player_script.resolve_facing(false, Vector2(0, -50), Vector2.ZERO, Vector2.DOWN),
+		Vector2.DOWN, "입력이 없으면 직전 조준을 유지한다", 0.001)
+
+	# ④ 마우스가 플레이어 위에 정확히 겹치면 이동 방향으로 넘어간다 (0 벡터 방지)
+	t.assert_vec_almost_eq(
+		player_script.resolve_facing(true, Vector2.ZERO, Vector2.LEFT, Vector2.UP),
+		Vector2.LEFT, "커서가 겹쳐 방향이 없으면 이동 입력을 쓴다", 0.001)
+
+	# ⑤ 항상 단위 벡터 — 아니면 사거리 판정이 흔들린다
+	var long_cursor: Vector2 = player_script.resolve_facing(
+		true, Vector2(300, 400), Vector2.ZERO, Vector2.UP)
+	t.assert_almost_eq(long_cursor.length(), 1.0, "조준은 단위 벡터여야 한다", 0.001)
+	var long_move: Vector2 = player_script.resolve_facing(
+		false, Vector2.ZERO, Vector2(3, 4), Vector2.UP)
+	t.assert_almost_eq(long_move.length(), 1.0, "이동 조준도 단위 벡터여야 한다", 0.001)
 
 
 ## 대상 하나를 향해 오른쪽으로 날아가는 투사체.
