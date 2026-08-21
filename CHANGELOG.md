@@ -6,6 +6,29 @@
 
 ### Added
 
+- **PHASE 4 — 반실시간 전투 (자동 검증 완료, 오너 PLAYTEST 대기).**
+  - `scripts/combat/damage_model.gd` — 설정서 §12.2의 4단계 피해식. **난수 없음**(`CBT-004`).
+  - `scripts/combat/stat_curve.gd` · `data/curves/stat_efficiency.json` — `CHR-008` 성장곡선을
+    데이터로. `CBT-010`의 √ 압축.
+  - `scripts/combat/weapon_data.gd` · `data/items/weapons.json` — `CBT-012`대로 무기별
+    스탯 비중을 **데이터에서** 정의. 코드에 무기 분기 없음.
+  - `scripts/combat/attack_state.gd` — `CBT-008` wind-up/active/recovery. **초 단위**(프레임 아님).
+  - `scripts/combat/combat_service.gd` — 공간 타격·급소 판정. 명중 굴림 없음(`CBT-006` TBD 회피).
+  - `scripts/combat/combatant.gd` — 전투 상태 골격. `BodyResilience` 비노출(`CBT-011`).
+  - `scripts/actors/enemy.gd` — 감지·추적·근접 공격. 함정도 밟는다(`FLR-028`).
+  - `scripts/combat/thrown_object.gd` — 던지기. **`TrapSensor.sense_impact()`를 재사용**한다.
+  - `scripts/world/time_scale.gd` — 전술 정지/슬로모션. 엔진 배속을 건드리지 않는다.
+  - `RunState.combatants`(유배자, 층을 넘어 따라감) · `WorldState.combatants`(적, 월드 공유).
+  - 세이브 v3 — 전투 상태 추가.
+  - `project.godot` — 공격(좌클릭/J) · 대시(Shift) · 던지기(F) · 전술 정지(Tab).
+
+### Changed
+
+- 전투 입력을 `_unhandled_input` 이벤트에서 **폴링**으로 바꿨다. `Input.action_press()`는
+  상태만 바꾸고 이벤트를 만들지 않아 **자동 테스트로 검증할 수 없었다** —
+  `P3-REV-005`("게임 경로에만 있는 버그")와 같은 함정이다.
+
+
 - **PHASE 3 — 상호작용·함정·파밍 (완료, `PLAYTESTED` 2026-08-20).**
   - 오너 판정: F1 없이 플레이해 함정 단서가 "잘 보인다". `FLR-011` 요건 충족.
   - 단서 밀도·진하기 조정은 도트 맵 완성 후(`PHASE 8`)로 보류.
