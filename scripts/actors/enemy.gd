@@ -107,6 +107,7 @@ func _resolve_active_hit() -> Dictionary:
 		target_combatant.id: {
 			"position": target.global_position,
 			"combatant": target_combatant,
+			"radius": CombatShape.radius_of(target),
 		}
 	}
 	var reachable := CombatService.targets_in_arc(global_position, attack_state, w, targets)

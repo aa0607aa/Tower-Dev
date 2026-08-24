@@ -92,8 +92,6 @@ func tick(world_delta: float) -> bool:
 		#   ① 벽 — 위에서 이미 처리했다. 물리적으로 못 들어간다
 		#   ② 대상 — **몸이 바닥보다 먼저 막는다.** 사람에게 맞은 돌은 바닥에 닿지 않는다
 		#   ③ 함정 — 아무것도 막지 않았을 때 바닥의 감지부에 닿는다
-		if _hit_target_in_cell(cell, cell_center):
-			return true
 
 		if cell == _last_cell:
 			continue
@@ -107,6 +105,13 @@ func tick(world_delta: float) -> bool:
 			global_position = cell_center
 			_land(cell_center)
 			return true
+
+	# ## 대상은 **선분 × 몸**으로 본다 (`P4-REV-006`)
+	# 전에는 "대상이 같은 32px 칸에 있는가"만 봤다. 그러면 궤적이 몸을 지나지 않아도
+	# 맞고, 칸 경계 반대편에서는 몸을 스쳐도 놓친다.
+	# 벽·함정 판정 뒤에 둔다 — 순서는 `P4-REV-005`에서 고정했다(벽 → 대상 → 함정).
+	if _hit_target_on_segment(global_position, next):
+		return true
 
 	global_position = next
 	_travelled += travel
@@ -143,31 +148,50 @@ func _cells_between(from: Vector2, to: Vector2) -> Array[Vector2i]:
 ## 건너뛰었다 — 벽·함정은 스윕하면서 대상만 끝점을 본 비대칭이었다 (`P4-REV-005`).
 ##
 ## 이제 지나간 **칸**을 기준으로 본다. 프레임률이 달라도 같은 대상에 맞는다.
-func _hit_target_in_cell(cell: Vector2i, cell_center: Vector2) -> bool:
+## 이 구간에서 대상에 맞았는가 — **선분 × 몸** 판정이다 (`P4-REV-006`).
+##
+## 칸 비교는 `CBT-008`("충돌 박스는 실제 데이터")에 어긋난다.
+## 선분으로 보면 프레임률이 달라도 같은 대상에 맞는다.
+func _hit_target_on_segment(from: Vector2, to: Vector2) -> bool:
 	if not target_provider.is_valid():
 		return false
 	var targets: Dictionary = target_provider.call()
-	# 같은 칸에 여럿이면 id 순으로 **결정적으로** 고른다 (`SYS-003`).
+	# 여럿이 걸리면 **먼저 만나는 대상**이 맞는다. 거리가 같으면 id 순 (`SYS-003`).
 	var ids: Array = targets.keys()
 	ids.sort_custom(func(a: Variant, b: Variant) -> bool: return String(a) < String(b))
+
+	var best_id: StringName = &""
+	var best_entry := {}
+	var best_along := INF
 	for id in ids:
 		var entry: Dictionary = targets[id]
 		var c: Combatant = entry["combatant"]
 		if c == null or not c.alive:
 			continue
-		if TrapSensor.cell_of(entry["position"] as Vector2) != cell:
+		var center: Vector2 = entry["position"]
+		var radius := float(entry.get("radius", 0.0))
+		if not CombatShape.segment_hits_circle(from, to, center, radius):
 			continue
-		# 던진 무기로 피해를 준다. 크리티컬은 사건에서만 (`CBT-004`).
-		if thrower != null:
-			var stone := WeaponData.get_weapon(&"thrown_stone")
-			if stone != null:
-				var r := DamageModel.resolve(stone, thrower.stats, c.armor,
-					c.body_resilience, {})
-				c.apply_damage(float(r["damage"]))
-		global_position = cell_center
-		_land(cell_center)
-		return true
-	return false
+		var along := (center - from).dot((to - from).normalized())
+		if along < best_along:
+			best_along = along
+			best_id = id
+			best_entry = entry
+	if best_entry.is_empty():
+		return false
+
+	var c2: Combatant = best_entry["combatant"]
+	# 던진 무기로 피해를 준다. 크리티컬은 사건에서만 (`CBT-004`).
+	if thrower != null:
+		var stone := WeaponData.get_weapon(&"thrown_stone")
+		if stone != null:
+			var r := DamageModel.resolve(stone, thrower.stats, c2.armor,
+				c2.body_resilience, {})
+			c2.apply_damage(float(r["damage"]))
+	var contact: Vector2 = best_entry["position"]
+	global_position = contact
+	_land(contact)
+	return true
 
 
 ## 착지 — **여기서만** 함정 자극이 나간다.

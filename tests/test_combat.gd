@@ -14,7 +14,7 @@ extends RefCounted
 ##
 ## GDScript의 런타임 스크립트 에러는 **그 함수만** 중단시키고 `run()`은 계속 진행한다.
 ## 하한을 못박아 두면 그렇게 사라진 단언이 실패로 드러난다.
-const MIN_ASSERTIONS := 107
+const MIN_ASSERTIONS := 124
 
 
 func run(t: TestCase) -> void:
@@ -38,6 +38,7 @@ func run(t: TestCase) -> void:
 	_test_active_window_survives_coarse_delta(t)
 	_test_projectile_hits_target_without_tunneling(t)
 	_test_aim_resolution(t)
+	_test_combat_uses_real_shapes(t)
 	t.done()
 
 
@@ -731,6 +732,91 @@ func _test_design_baselines_are_not_pinned(t: TestCase) -> void:
 		"무기 데이터가 비canon임을 명시해야 한다 (P4-REV-004)")
 	t.assert_true(raw.contains("P4-REV-004"),
 		"오너 승인 근거가 데이터에 남아 있어야 한다")
+
+
+## ★★ `P4-REV-006` — 판정은 **중심점·칸이 아니라 몸**이 한다. (`CBT-008`)
+##
+## 전에는 근접이 대상 중심점만, 투사체가 같은 32px 칸인지만 봤다. 그래서:
+##   - 같은 칸이면 궤적이 몸을 지나지 않아도 **맞았다**
+##   - 칸 경계 반대편에서는 몸 가장자리를 통과해도 **놓쳤다**
+func _test_combat_uses_real_shapes(t: TestCase) -> void:
+	# ① 형태는 **물리 충돌 형태에서** 온다 — 두 벌을 만들지 않는다
+	var body := CharacterBody2D.new()
+	var cs := CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(20, 20)
+	cs.shape = rect
+	body.add_child(cs)
+	t.assert_almost_eq(CombatShape.radius_of(body), 10.0,
+		"사각형 몸은 내접원(짧은 변의 절반)을 쓴다", 0.001)
+	body.free()
+
+	var bare := Node2D.new()
+	t.assert_almost_eq(CombatShape.radius_of(bare), CombatShape.FALLBACK_RADIUS,
+		"형태가 없으면 대체값을 쓴다 — 0이면 점 판정이 된다", 0.001)
+	bare.free()
+	t.assert_true(CombatShape.FALLBACK_RADIUS > 0.0, "대체값이 0이면 안 된다")
+
+	# ② 선분 × 원 — 칸이 아니라 궤적이 결정한다
+	t.assert_true(CombatShape.segment_hits_circle(
+		Vector2(0, 0), Vector2(100, 0), Vector2(50, 5), 10.0),
+		"궤적이 몸을 지나면 맞아야 한다")
+	t.assert_true(not CombatShape.segment_hits_circle(
+		Vector2(0, 0), Vector2(100, 0), Vector2(50, 40), 10.0),
+		"궤적이 몸을 비껴가면 안 맞아야 한다")
+	# ★ 같은 칸이어도 궤적이 몸을 지나지 않으면 안 맞는다
+	t.assert_true(not CombatShape.segment_hits_circle(
+		Vector2(0, 0), Vector2(0, 40), Vector2(28, 20), 5.0),
+		"같은 칸이어도 궤적이 몸을 지나지 않으면 안 맞는다 (칸 판정과의 차이)")
+	# ★ 칸이 달라도 몸이 궤적에 걸리면 맞는다
+	t.assert_true(CombatShape.segment_hits_circle(
+		Vector2(0, 20), Vector2(60, 20), Vector2(33, 20), 10.0),
+		"칸 경계 반대편이어도 몸이 궤적에 걸리면 맞는다")
+	# 선분 밖 연장선은 맞지 않는다 — 직선이 아니라 선분이다
+	t.assert_true(not CombatShape.segment_hits_circle(
+		Vector2(0, 0), Vector2(10, 0), Vector2(90, 0), 5.0),
+		"선분을 지나 연장선에 있는 대상은 맞지 않는다")
+
+	# ③ 부채꼴 × 원 — 몸 크기가 각도·거리 양쪽에 반영된다
+	var reach := 34.0
+	var half_arc := deg_to_rad(90.0) * 0.5
+	t.assert_true(CombatShape.arc_hits_circle(
+		Vector2.ZERO, Vector2.RIGHT, reach, half_arc, Vector2(20, 0), 10.0),
+		"정면 리치 안은 맞는다")
+	t.assert_true(not CombatShape.arc_hits_circle(
+		Vector2.ZERO, Vector2.RIGHT, reach, half_arc, Vector2(-20, 0), 10.0),
+		"등 뒤는 맞지 않는다")
+	# ★ 중심은 리치 밖인데 **몸 가장자리**가 들어온 경우
+	t.assert_true(CombatShape.arc_hits_circle(
+		Vector2.ZERO, Vector2.RIGHT, reach, half_arc, Vector2(reach + 5.0, 0), 10.0),
+		"중심이 리치 밖이어도 몸이 걸치면 맞아야 한다 (중심점 판정과의 차이)")
+	t.assert_true(not CombatShape.arc_hits_circle(
+		Vector2.ZERO, Vector2.RIGHT, reach, half_arc, Vector2(reach + 40.0, 0), 10.0),
+		"몸까지 리치 밖이면 안 맞는다")
+	# ★ 각도 경계에서도 몸 폭이 반영된다
+	var edge := Vector2.RIGHT.rotated(half_arc + deg_to_rad(6.0)) * 25.0
+	t.assert_true(CombatShape.arc_hits_circle(
+		Vector2.ZERO, Vector2.RIGHT, reach, half_arc, edge, 10.0),
+		"각도 경계 바로 밖이어도 몸이 걸치면 맞아야 한다")
+	# 몸이 없으면(반지름 0) 중심점 판정과 같다
+	t.assert_true(not CombatShape.arc_hits_circle(
+		Vector2.ZERO, Vector2.RIGHT, reach, half_arc, edge, 0.0),
+		"반지름 0이면 중심점 판정과 같아야 한다")
+
+	# ④ 굴림이 없다 — `CBT-006` TBD를 몰래 확정하지 않는다
+	var r := "rand"
+	var src := _code_only(FileAccess.get_file_as_string("res://scripts/combat/combat_shape.gd"))
+	for forbidden in [r + "i(", r + "f(", "RandomNumberGenerator"]:
+		t.assert_true(not src.contains(forbidden),
+			"형태 판정에 난수를 쓰면 CBT-006의 TBD를 확정하는 것이다 (`%s`)" % forbidden)
+
+	# ⑤ 전투 코드가 **칸 비교로 되돌아가지 않는다**
+	var proj := _code_only(FileAccess.get_file_as_string("res://scripts/combat/thrown_object.gd"))
+	t.assert_true(proj.contains("segment_hits_circle"),
+		"투사체 대상 판정은 선분 × 몸이어야 한다 (P4-REV-006)")
+	var melee := _code_only(FileAccess.get_file_as_string("res://scripts/combat/combat_service.gd"))
+	t.assert_true(melee.contains("arc_hits_circle"),
+		"근접 판정은 부채꼴 × 몸이어야 한다 (P4-REV-006)")
 
 
 func _code_only(src: String) -> String:

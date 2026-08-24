@@ -47,12 +47,12 @@ static func targets_in_arc(attacker_position: Vector2, state: AttackState,
 		var c: Combatant = entry["combatant"]
 		if c == null or not c.alive:
 			continue
-		var to_target: Vector2 = (entry["position"] as Vector2) - attacker_position
-		var distance := to_target.length()
-		if distance > weapon.reach:
-			continue
-		# 리치 안이어도 등 뒤는 맞지 않는다 — 방향이 실제 데이터다.
-		if distance > 0.0 and absf(state.direction.angle_to(to_target)) > half_arc:
+		# ## 중심점이 아니라 **몸**을 본다 (`P4-REV-006`)
+		# 중심만 보면 리치 끝에서 몸이 절반 들어와 있어도 놓치고,
+		# 각도 경계에서도 마찬가지다. `CBT-008`이 "충돌 박스는 실제 데이터"라고 정한다.
+		var radius := float(entry.get("radius", 0.0))
+		if not CombatShape.arc_hits_circle(attacker_position, state.direction,
+				weapon.reach, half_arc, entry["position"] as Vector2, radius):
 			continue
 		out.append(id)
 	return out

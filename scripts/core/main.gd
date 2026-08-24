@@ -191,7 +191,12 @@ func _enemy_targets() -> Dictionary:
 			continue
 		if not e.combatant.alive:
 			continue
-		out[e.combatant.id] = {"position": e.global_position, "combatant": e.combatant}
+		# 몸 크기를 함께 넘긴다 — 판정은 중심점이 아니라 **몸**이 한다 (`P4-REV-006`).
+		out[e.combatant.id] = {
+			"position": e.global_position,
+			"combatant": e.combatant,
+			"radius": CombatShape.radius_of(e),
+		}
 	return out
 
 
