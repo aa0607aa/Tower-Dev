@@ -148,8 +148,15 @@ func move(world_delta: float) -> void:
 	var motion := velocity * world_delta
 	var collision := move_and_collide(motion)
 	if collision != null:
-		# 벽에 부딪히면 미끄러진다 — 막다른 곳에서 떨리지 않게.
-		move_and_collide(motion.slide(collision.get_normal()))
+		# ## 미끄러질 때는 **남은 이동량**을 쓴다 (`P4-RISK-001`)
+		# 전에는 원래 `motion` 전체를 다시 미끄러뜨렸다. 프레임 중간에 벽에 닿으면
+		# 이미 쓴 만큼을 **되쓰게** 되어 그 프레임의 이동 예산을 넘는다.
+		#
+		# 낮은 프레임률일수록 한 프레임의 `motion`이 크므로 초과분도 커진다 —
+		# 30fps 적이 60fps 적보다 빨리 벽을 타고 도는 상황이 된다. `CBT-001` 위반이다.
+		#
+		# `get_remainder()`가 정확히 "이 프레임에 아직 못 간 만큼"이다.
+		move_and_collide(collision.get_remainder().slide(collision.get_normal()))
 
 	# 함정은 플레이어 전용이 아니다 (`FLR-028`).
 	if trap_sensor != null and global_position != before:
