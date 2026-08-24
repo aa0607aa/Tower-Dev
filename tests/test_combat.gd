@@ -14,7 +14,7 @@ extends RefCounted
 ##
 ## GDScript의 런타임 스크립트 에러는 **그 함수만** 중단시키고 `run()`은 계속 진행한다.
 ## 하한을 못박아 두면 그렇게 사라진 단언이 실패로 드러난다.
-const MIN_ASSERTIONS := 124
+const MIN_ASSERTIONS := 126
 
 
 func run(t: TestCase) -> void:
@@ -802,6 +802,27 @@ func _test_combat_uses_real_shapes(t: TestCase) -> void:
 	t.assert_true(not CombatShape.arc_hits_circle(
 		Vector2.ZERO, Vector2.RIGHT, reach, half_arc, edge, 0.0),
 		"반지름 0이면 중심점 판정과 같아야 한다")
+
+	# ★ `CombatService`가 실제로 `radius`를 쓰는가 — 순수 함수만 맞아도 소용없다
+	var w := WeaponData.get_weapon(&"starting_dagger")
+	if w != null:
+		var st := AttackState.new()
+		st.start(w, Vector2.RIGHT)
+		st.advance(w.wind_up + 0.001)
+		# 중심은 리치 **밖**, 몸은 리치 **안**
+		var just_out := Vector2(w.reach + 5.0, 0.0)
+		var with_body := {&"big": {"position": just_out,
+			"combatant": Combatant.new(&"big"), "radius": 10.0}}
+		t.assert_true(CombatService.targets_in_arc(Vector2.ZERO, st, w, with_body).has(&"big"),
+			"중심이 리치 밖이어도 몸이 걸치면 잡혀야 한다 (CombatService가 radius를 써야 한다)")
+
+		var st2 := AttackState.new()
+		st2.start(w, Vector2.RIGHT)
+		st2.advance(w.wind_up + 0.001)
+		var no_body := {&"point": {"position": just_out,
+			"combatant": Combatant.new(&"point"), "radius": 0.0}}
+		t.assert_true(not CombatService.targets_in_arc(Vector2.ZERO, st2, w, no_body).has(&"point"),
+			"반지름 0이면 같은 위치라도 잡히지 않아야 한다 — radius가 실제로 쓰인다는 증거")
 
 	# ④ 굴림이 없다 — `CBT-006` TBD를 몰래 확정하지 않는다
 	var r := "rand"
