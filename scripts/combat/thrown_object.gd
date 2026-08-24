@@ -50,7 +50,16 @@ func tick(world_delta: float) -> bool:
 	if _landed or world_delta <= 0.0:
 		return _landed
 
-	var step := direction * SPEED * world_delta
+	# ## 이동 구간을 **남은 사거리로 먼저 자른다** (`P4-REV-007`)
+	# 전에는 `SPEED * delta` 전체를 훑고 **나서** 사거리를 검사했다. 큰 delta에서는
+	# 남은 사거리 밖의 적·벽·함정을 먼저 건드릴 수 있었다 —
+	# 프레임률에 따라 무엇을 맞히는지가 달라지므로 `CBT-001`(반실시간)에 어긋난다.
+	var remaining := maxf(0.0, MAX_RANGE - _travelled)
+	var travel := minf(SPEED * world_delta, remaining)
+	if travel <= 0.0:
+		_land(global_position)
+		return true
+	var step := direction * travel
 	var next := global_position + step
 
 	# ## 지나간 칸을 **전부** 훑는다
@@ -67,7 +76,8 @@ func tick(world_delta: float) -> bool:
 		# ## 지형에 막힌다 — **물리적 벽**이다
 		# 경계(`AccessEnvelope`)만 보고 날면 안 된다. 경계는 `FLR-024`의 **인과 제약**이지
 		# 물리 벽이 아니다. 둘을 같은 것으로 쓰면 한쪽이 어긋날 때 조용히 통과한다.
-		if trap_sensor != null and trap_sensor.definition != null 				and not trap_sensor.definition.is_walkable(cell):
+		var blocked_by_terrain := trap_sensor != null and trap_sensor.definition != null and not trap_sensor.definition.is_walkable(cell)
+		if blocked_by_terrain:
 			_land(global_position)
 			return true
 
@@ -99,8 +109,9 @@ func tick(world_delta: float) -> bool:
 			return true
 
 	global_position = next
-	_travelled += step.length()
+	_travelled += travel
 
+	# 사거리를 다 썼으면 여기서 멈춘다. 위에서 이미 잘랐으므로 초과할 수 없다.
 	if _travelled >= MAX_RANGE:
 		_land(global_position)
 		return true
