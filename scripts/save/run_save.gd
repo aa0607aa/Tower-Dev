@@ -18,9 +18,14 @@ extends RefCounted
 ## `VERSION_MISMATCH`로 알린다. 출시 전이라 migration을 만들 이유가 없다.
 ## `v2 → v3` (`PHASE 4`): 전투 상태(`combatants`)가 추가됐다.
 ## `v3 → v4` (`P4-REV-002`): 적 런타임 상태(`actor_states`)와 공격 진행(`attack_states`).
+## `v4 → v5` (`P4-REV-002` 잔여): 유배자 위치·조준(`exile_states`), 비행 중 투사체,
+## `TrapSensor` 마지막 칸.
+##
 ## **대시는 저장하지 않는다** — 로드하면 취소된 것으로 본다 (`RunState` 주석 참조).
+## **투사체는 저장한다** — 오너 결정 2026-08-21. 둘의 차이는 의도된 것이며
+## 각각 계약으로 명시돼 있다. 조용히 사라지는 상태는 없다.
 ## v1/v2 호환이 필요해지면 여기에 **명시적 migration**을 만든다.
-const SAVE_VERSION := 4
+const SAVE_VERSION := 5
 
 
 static func to_dict(run: RunState) -> Dictionary:
@@ -79,6 +84,14 @@ static func from_text(text: String, defs: Dictionary) -> Dictionary:
 		for aid in wd.get("actor_states", {}):
 			world.actor_states[StringName(aid)] = wd["actor_states"][aid]
 
+		# 비행 중인 투사체 (오너 결정 — 저장한다).
+		world.projectiles = (wd.get("projectiles", []) as Array).duplicate(true)
+
+		# 센서 마지막 칸 — 없으면 로드 직후 제자리에서 함정이 재발동한다.
+		for sid in wd.get("sensor_cells", {}):
+			var c: Array = wd["sensor_cells"][sid]
+			world.sensor_cells[StringName(sid)] = Vector2i(int(c[0]), int(c[1]))
+
 		for entry in wd.get("ground_items", []):
 			world.put_ground_item(
 				ItemInstance.from_save_dict(entry["instance"]),
@@ -96,8 +109,8 @@ static func from_text(text: String, defs: Dictionary) -> Dictionary:
 		run.combatants[StringName(eid)] = Combatant.from_save_dict(d["combatants"][eid])
 
 	# 유배자 공격 진행 — 휘두르던 중에 저장하면 선딜이 사라지면 안 된다.
-	for eid in d.get("attack_states", {}):
-		run.attack_states[StringName(eid)] = d["attack_states"][eid]
+	for eid in d.get("exile_states", {}):
+		run.exile_states[StringName(eid)] = d["exile_states"][eid]
 
 	return {"status": status, "run": run}
 

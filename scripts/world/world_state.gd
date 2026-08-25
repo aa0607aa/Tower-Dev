@@ -54,6 +54,19 @@ var combatants: Dictionary = {}
 ## 세이브의 진실은 이 데이터이고 노드는 그것을 그리는 것뿐이다 (`SYS-003`).
 var actor_states: Dictionary = {}
 
+## 비행 중인 투사체 (`P4-REV-002`, 오너 결정 2026-08-21 — **저장한다**).
+##
+## 대시는 "로드 시 취소" 계약이지만 투사체는 다르다. 던진 돌이 함정을 향해 날아가는
+## 중간에 저장했는데 사라지면 **던진 행위 자체가 무효가 된다.**
+## 오너가 "비행 중에도 그대로 재개"를 택했다.
+var projectiles: Array = []
+
+## `TrapSensor`의 개체별 마지막 칸 (`P4-REV-002`).
+##
+## 저장하지 않으면 **반복형 함정 위에서 저장·로드했을 때 움직이지 않았는데 재발동한다** —
+## 로드 직후 센서가 "처음 보는 칸"으로 판단하기 때문이다.
+var sensor_cells: Dictionary = {}
+
 
 func _init(p_world_id: StringName = &"") -> void:
 	world_id = p_world_id
@@ -164,10 +177,19 @@ func to_save_dict() -> Dictionary:
 	for aid in actor_ids:
 		actors_out[String(aid)] = actor_states[aid]
 
+	var sensor_ids: Array = sensor_cells.keys()
+	sensor_ids.sort_custom(func(a: Variant, b: Variant) -> bool: return String(a) < String(b))
+	var sensor_out := {}
+	for sid in sensor_ids:
+		var c: Vector2i = sensor_cells[sid]
+		sensor_out[String(sid)] = [c.x, c.y]
+
 	return {
 		"world_id": String(world_id),
 		"combatants": combat_out,
 		"actor_states": actors_out,
+		"projectiles": projectiles.duplicate(true),
+		"sensor_cells": sensor_out,
 		"floors": floor_out,
 		"terrain": terrain.to_save_dict() if terrain != null else {},
 		"ground_items": items_out,

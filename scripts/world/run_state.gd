@@ -31,7 +31,10 @@ var inventories: Dictionary = {}
 ## `FloorState`에 두면 계단을 오를 때 체력이 초기화된다.
 var combatants: Dictionary = {}
 
-## `exile_id → AttackState 저장형` (`P4-REV-002`).
+## `exile_id → { position, facing, attack }` (`P4-REV-002`).
+##
+## 위치·조준·공격 진행이 한 덩어리다. **씬 노드가 아니라 이것이 정본**이다 —
+## 노드가 사라지면 상태도 사라지므로 저장은 언제든 데이터만 보면 된다.
 ##
 ## 휘두르던 중에 저장하면 **선딜이 사라지면 안 된다.** 공격은 시간이 걸리는 행위이고
 ## 그 진행이 상태다.
@@ -40,7 +43,7 @@ var combatants: Dictionary = {}
 ## 대시는 0.14초짜리 순간 이동이라 중간 상태를 복원할 의미가 없고,
 ## 로드 직후 관성으로 벽에 박히면 더 나쁘다. **로드하면 대시는 취소된 것으로 본다.**
 ## 쿨다운도 초기화된다. 조용히 잃는 것이 아니라 **정해놓고 잃는 것**이다.
-var attack_states: Dictionary = {}
+var exile_states: Dictionary = {}
 
 
 func _init(p_run_seed: int = 0) -> void:
@@ -124,16 +127,16 @@ func to_save_dict() -> Dictionary:
 	for cid in combat_ids:
 		combat_out[String(cid)] = (combatants[cid] as Combatant).to_save_dict()
 
-	var attack_ids: Array = attack_states.keys()
-	attack_ids.sort_custom(func(a: Variant, b: Variant) -> bool: return String(a) < String(b))
-	var attack_out := {}
-	for aid in attack_ids:
-		attack_out[String(aid)] = attack_states[aid]
+	var exile_ids2: Array = exile_states.keys()
+	exile_ids2.sort_custom(func(a: Variant, b: Variant) -> bool: return String(a) < String(b))
+	var exile_out := {}
+	for xid in exile_ids2:
+		exile_out[String(xid)] = exile_states[xid]
 
 	return {
 		"run_seed": run_seed,
 		"worlds": worlds_out,
 		"inventories": inv_out,
 		"combatants": combat_out,
-		"attack_states": attack_out,
+		"exile_states": exile_out,
 	}

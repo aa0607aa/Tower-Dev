@@ -1,3 +1,4 @@
+class_name Main
 extends Node2D
 ## Main — PHASE 3까지 반영.
 ##
@@ -43,6 +44,15 @@ var _world: WorldState
 ## 이 유배자의 id. 랜덤 유배자 생성 규칙(`CHR-010`)은 TBD라 지금은 고정값이다.
 const EXILE_ID := &"player"
 
+## 로드한 회차를 **새 씬에 주입하는 자리**. (`P4-REV-002`)
+##
+## 씬을 바꾸기 전에 여기 넣어두면 `_ready()`가 새로 만들지 않고 이것을 쓴다.
+## 이것이 production 복원 경로다 — 테스트만의 우회로가 아니다.
+## 로드 화면이 붙으면 그쪽도 같은 자리에 넣는다.
+##
+## 한 번 쓰고 비운다. 남겨두면 다음 새 게임이 옛 세이브로 시작한다.
+static var pending_run: RunState = null
+
 ## 유배자 체중(kg). **DESIGN이며 canon 아님** — 무게/운반 공식은 `PHASE 6` TBD다.
 ## 함정 압력 판정에 필요한 최소 표현이라 여기 둔다.
 const EXILE_MASS := 70.0
@@ -80,12 +90,18 @@ func _ready() -> void:
 	_player.access_envelope = AccessService.envelope_from_floor(&"player", _floor_def)
 
 	# 회차 → 월드 → 층 (`WLD-003`). 인벤토리는 회차에, 바닥 물건은 월드에 붙는다.
-	_run = RunState.new(RUN_SEED)
+	# 로드한 회차가 있으면 **그것이 정본**이다 (`P4-REV-002`).
+	var restored := Main.pending_run != null
+	_run = Main.pending_run if restored else RunState.new(RUN_SEED)
+	Main.pending_run = null
 	_world = _run.ensure_world(_floor_def.world_id)
 
 	# 시작 위치는 회차마다 시드가 고른다 (`D-022`). 결과는 FloorState에 저장된다.
-	_floor_state = FloorPopulator.populate(_floor_def, RUN_SEED)
-	_world.put_floor(_floor_state)
+	# 로드한 층이 있으면 다시 굴리지 않는다 — 시드는 재생성용 진실이 아니다 (`SYS-003`).
+	_floor_state = _world.floor_state(_floor_def.floor_id)
+	if _floor_state == null:
+		_floor_state = FloorPopulator.populate(_floor_def, RUN_SEED)
+		_world.put_floor(_floor_state)
 	var start := _floor_state.start_cell
 	_player.global_position = Vector2(start.x * CELL + CELL / 2.0, start.y * CELL + CELL / 2.0)
 
@@ -102,11 +118,15 @@ func _ready() -> void:
 	_player.combatant = _run.ensure_combatant(EXILE_ID)
 	# 정지 중에는 플레이어가 물리적으로 움직이지 않아야 한다 (`P4-REV-001`).
 	_player.time_scale = _time
-	# 휘두르던 공격이 있으면 이어받는다 (`P4-REV-002`).
-	if _run.attack_states.has(EXILE_ID):
-		_player.attack_state = AttackState.from_save_dict(_run.attack_states[EXILE_ID])
+	# 유배자 런타임 상태를 이어받는다 — 위치·조준·휘두르던 공격 (`P4-REV-002`).
+	_restore_exile_state()
+
+	# 센서의 마지막 칸을 이어받는다. 없으면 로드 직후 제자리에서 함정이 재발동한다.
+	for sid in _world.sensor_cells:
+		_trap_sensor._last_cell[sid] = _world.sensor_cells[sid]
 
 	_spawn_enemies()
+	_restore_projectiles()
 
 	# 파밍 결과를 바닥에 실체화한다 (`P3-T3`). 멱등하므로 로드 후 다시 불러도 복제되지 않는다.
 	var materialized := ItemService.materialize_floor_loot(_world, _floor_def, _floor_state)
@@ -183,6 +203,44 @@ func _spawn_enemies() -> void:
 	GameLog.info("Main", "적 %d체 배치" % _enemies.size())
 
 
+## 유배자의 위치·조준·공격 진행을 복원한다. (`P4-REV-002`)
+##
+## 없으면 시작 위치를 그대로 쓴다 — 새 게임이다.
+func _restore_exile_state() -> void:
+	var d: Dictionary = _run.exile_states.get(EXILE_ID, {})
+	if d.is_empty():
+		return
+	var pos: Array = d.get("position", [])
+	if pos.size() == 2:
+		_player.global_position = Vector2(float(pos[0]), float(pos[1]))
+	var face: Array = d.get("facing", [])
+	if face.size() == 2:
+		_player.facing = Vector2(float(face[0]), float(face[1]))
+	if d.has("attack"):
+		_player.attack_state = AttackState.from_save_dict(d["attack"])
+
+
+## 비행 중이던 투사체를 다시 띄운다. (`P4-REV-002`, 오너 결정 — 저장한다)
+##
+## 대시와 달리 투사체는 **취소하지 않는다.** 던진 돌이 함정을 향해 날아가는 중간에
+## 저장했는데 사라지면 던진 행위 자체가 무효가 된다.
+func _restore_projectiles() -> void:
+	for d in _world.projectiles:
+		var p := ThrownObject.new()
+		p.direction = Vector2(float(d["direction"][0]), float(d["direction"][1]))
+		p.thrower_id = StringName(d.get("thrower_id", ""))
+		p.thrower = _run.ensure_combatant(p.thrower_id)
+		p.trap_sensor = _trap_sensor
+		p.envelope = _player.access_envelope
+		p.target_provider = _enemy_targets
+		p._travelled = float(d.get("travelled", 0.0))
+		add_child(p)
+		p.global_position = Vector2(float(d["position"][0]), float(d["position"][1]))
+		_projectiles.append(p)
+	if not _world.projectiles.is_empty():
+		GameLog.info("Main", "비행 중이던 투사체 %d개 복원" % _world.projectiles.size())
+
+
 ## 지금 살아 있는 전투 대상들. 공격 판정과 투사체가 함께 쓴다.
 func _enemy_targets() -> Dictionary:
 	var out := {}
@@ -203,8 +261,19 @@ func _enemy_targets() -> Dictionary:
 func _process(delta: float) -> void:
 	_poll_combat_input()
 	_refresh_interaction_prompt()
-	_check_trap_underfoot()
 	_advance_combat(delta)
+
+
+## 함정 판정은 **물리 프레임**에서 한다. (2026-08-24)
+##
+## 전에는 `_process`(렌더 프레임)에 있었다. 그런데 이것은 "몸이 지금 어느 칸에 있는가"라는
+## **위치 판정**이고, 위치를 정하는 것은 `_physics_process`다.
+##
+## 렌더 프레임에 두면 렌더 레이트에 따라 **건너뛰거나 중복된다** — 헤드리스에서
+## 물리 프레임 수십 번 동안 `_process`가 한 번도 돌지 않는 것을 실제로 관측했다.
+## 프레임률에 따라 함정이 터지기도 안 터지기도 하면 `CBT-001`(반실시간)에 어긋난다.
+func _physics_process(_delta: float) -> void:
+	_check_trap_underfoot()
 
 
 ## 전투 입력은 **폴링한다.** 이동(`Input.get_vector`)과 같은 방식이다.
@@ -260,8 +329,6 @@ func _advance_combat(engine_delta: float) -> void:
 		if not hit.is_empty() and float(hit.get("damage", 0.0)) > 0.0:
 			_on_player_hurt(hit)
 
-	_sync_runtime_state()
-
 	for p in _projectiles.duplicate():
 		if p == null or not is_instance_valid(p):
 			_projectiles.erase(p)
@@ -270,16 +337,47 @@ func _advance_combat(engine_delta: float) -> void:
 			_projectiles.erase(p)
 
 
-## 노드의 런타임 상태를 **세이브의 정본**에 밀어 넣는다 (`P4-REV-002`).
+## 노드의 런타임 상태를 **세이브 데이터로 캡처한다.** (`P4-REV-002`)
 ##
-## 씬 노드가 정본이면 저장할 때 그 노드를 뒤져야 하고, 노드가 사라진 순간 상태도 사라진다.
-## 그래서 매 틱 데이터 쪽으로 옮겨둔다 — 저장은 언제든 데이터만 보면 된다.
-func _sync_runtime_state() -> void:
+## ## 왜 매 틱이 아니라 저장 시점인가
+## 처음에는 `_process`에서 매 틱 밀어 넣었다. 그런데 `_process`가 도는 시점과 저장 시점이
+## 어긋나면 **한 프레임 전 값이 저장된다** — 실제로 그랬다. 테스트에서 플레이어를 옮긴 뒤
+## 저장했는데 옮기기 **전** 위치가 저장돼 복원이 조용히 틀렸다.
+##
+## 저장은 "지금 이 순간"을 담아야 한다. 그래서 **저장할 때 노드를 읽는다.**
+## 매 틱 복사하지 않으므로 낭비도 없다.
+##
+## 씬 노드는 여전히 정본이 아니다 — 이 함수가 데이터로 옮긴 뒤에는 데이터가 진실이고,
+## 노드가 사라져도 저장된 값은 남는다.
+func capture_runtime_state() -> void:
 	for e in _enemies:
 		if e == null or not is_instance_valid(e) or e.combatant == null:
 			continue
 		_world.actor_states[e.combatant.id] = e.to_runtime_dict()
-	_run.attack_states[EXILE_ID] = _player.attack_state.to_save_dict()
+
+	# 유배자 — 위치·조준·공격 진행. **대시는 넣지 않는다** (로드 시 취소 계약).
+	_run.exile_states[EXILE_ID] = {
+		"position": [_player.global_position.x, _player.global_position.y],
+		"facing": [_player.facing.x, _player.facing.y],
+		"attack": _player.attack_state.to_save_dict(),
+	}
+
+	# 비행 중인 투사체 — 오너 결정으로 **저장한다**.
+	var flying: Array = []
+	for p in _projectiles:
+		if p == null or not is_instance_valid(p) or p.has_landed():
+			continue
+		flying.append({
+			"position": [p.global_position.x, p.global_position.y],
+			"direction": [p.direction.x, p.direction.y],
+			"travelled": p._travelled,
+			"thrower_id": String(p.thrower_id),
+		})
+	_world.projectiles = flying
+
+	# 센서의 마지막 칸 — 로드 직후 제자리 재발동을 막는다.
+	for sid in _trap_sensor._last_cell:
+		_world.sensor_cells[sid] = _trap_sensor._last_cell[sid]
 
 
 ## 플레이어의 유효 구간 타격. 판정은 전부 `CombatService`가 한다.

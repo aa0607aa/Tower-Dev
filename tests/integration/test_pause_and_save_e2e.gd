@@ -212,7 +212,7 @@ func _test_enemy_runtime_state_roundtrip(tree: SceneTree, t: TestCase, main: Nod
 	enemy.attack_state.advance(w.wind_up * 0.4)
 	enemy.attack_state.hit_ids.append(&"someone")
 	enemy.mode = Enemy.Mode.CHASE
-	await tree.physics_frame  # `_sync_runtime_state()`가 데이터로 옮긴다
+	main.capture_runtime_state()  # 저장 시점에 노드를 읽는다
 
 	var saved: Dictionary = main._world.actor_states.get(enemy.combatant.id, {})
 	t.assert_true(not saved.is_empty(),
@@ -253,17 +253,17 @@ func _test_player_attack_state_roundtrip(tree: SceneTree, t: TestCase, main: Nod
 	player.facing = Vector2(0, 1)
 	player.attack_state.start(w, player.facing)
 	player.attack_state.advance(w.wind_up * 0.5)
-	await tree.physics_frame  # 동기화
+	main.capture_runtime_state()
 
-	t.assert_true(main._run.attack_states.has(main.EXILE_ID),
-		"유배자 공격 진행이 세이브 데이터에 있어야 한다 (P4-REV-002)")
+	t.assert_true(main._run.exile_states.has(main.EXILE_ID),
+		"유배자 런타임 상태가 세이브 데이터에 있어야 한다 (P4-REV-002)")
 
 	var defs := {main._floor_def.floor_id: main._floor_def}
 	var r := RunSave.from_text(RunSave.to_text(main._run), defs)
 	var loaded: RunState = r["run"]
 	if loaded == null:
 		return
-	var ra := AttackState.from_save_dict(loaded.attack_states[main.EXILE_ID])
+	var ra := AttackState.from_save_dict(loaded.exile_states[main.EXILE_ID]["attack"])
 
 	t.assert_eq(int(ra.phase), int(player.attack_state.phase),
 		"휘두르던 선딜이 사라지면 안 된다")
@@ -281,8 +281,8 @@ func _test_dash_is_transient_by_contract(t: TestCase) -> void:
 	var saved := JSON.stringify(run.to_save_dict())
 	t.assert_true(not saved.contains("dash"),
 		"대시 상태가 세이브에 들어가면 계약과 어긋난다")
-	t.assert_true(saved.contains("attack_states"),
-		"공격 진행은 반대로 반드시 저장돼야 한다")
+	t.assert_true(saved.contains("exile_states"),
+		"유배자 런타임 상태는 반대로 반드시 저장돼야 한다")
 
 
 func _toggle_pause(main: Node2D) -> void:
